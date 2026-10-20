@@ -99,8 +99,6 @@ public partial class OrderDetailDialog : Window
 
         SubtotalVal.Text = $"₱{_order.ItemsSubtotal:N2}";
         SvcFeeVal.Text = $"₱{_order.ServiceFee:N2}";
-        DelFeeVal.Text = $"₱{_order.DeliveryFee:N2}";
-        DiscountVal.Text = $"-₱{_order.Discount:N2}";
         GrandTotalVal.Text = $"₱{_order.GrandTotal:N2}";
 
         var totalPaid = _order.TotalPaid;
@@ -341,32 +339,12 @@ public partial class OrderDetailDialog : Window
             ? PasabuyFeeService.CalculateServiceFee(_order.ItemsSubtotal, _db)
             : 0m;
         var svc = new OrderService(_db);
-        var (ok, msg) = svc.Update(_order.Id, _order.CustomerId, _order.DeliveryType, _order.Address, _order.Notes, autoFee, _order.DeliveryFee, _order.Discount);
+        var (ok, msg) = svc.Update(_order.Id, _order.CustomerId, _order.DeliveryType, _order.Address, _order.Notes, autoFee, 0m, 0m);
         if (ok)
         {
             ReloadOrder();
             StatusMessage.Text = $"Pasabuy fee auto-calculated: ₱{autoFee:N2}";
             StatusMessage.Foreground = new SolidColorBrush(Color.FromRgb(13, 148, 136));
-        }
-    }
-
-    private void OnDeleteOrder(object sender, RoutedEventArgs e)
-    {
-        var res = MessageBox.Show(
-            $"Are you sure you want to permanently delete Order {_order.OrderNo}?\n\nThis cannot be undone.",
-            "Delete Order",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
-
-        if (res == MessageBoxResult.Yes)
-        {
-            var svc = new OrderService(_db);
-            if (svc.Delete(_order.Id))
-            {
-                MessageBox.Show($"Order {_order.OrderNo} has been deleted.", "Deleted", MessageBoxButton.OK, MessageBoxImage.Information);
-                DialogResult = true;
-                Close();
-            }
         }
     }
 

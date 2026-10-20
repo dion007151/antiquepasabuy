@@ -305,8 +305,6 @@ public partial class OrdersPage : Page
             EmptyStatePanel.Visibility = _visibleRowVms.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         }
         UpdateSelectionState();
-        // Update KPI summary cards
-        UpdateKpiCards();
     }
 
     private void OnTabClick(object s, RoutedEventArgs e)
@@ -320,17 +318,6 @@ public partial class OrdersPage : Page
 
 
     private void OnSearch(object s, TextChangedEventArgs e) => ApplyFilter();
-
-    private void UpdateKpiCards()
-    {
-        if (_allRowVms is null) return;
-        var all = _allRowVms;
-        if (KpiTotalOrders != null) KpiTotalOrders.Text = all.Count.ToString();
-        if (KpiWaiting  != null) KpiWaiting.Text  = all.Count(r => r.Status == OrderStatus.READY_TO_BUY || r.Status == OrderStatus.WAITING_CONFIRMATION).ToString();
-        if (KpiBuying   != null) KpiBuying.Text   = all.Count(r => r.Status == OrderStatus.BUYING_NOW).ToString();
-        if (KpiUnpaid   != null) KpiUnpaid.Text   = all.Count(r => r.PaymentStatus != PaymentStatus.PAID && r.Status != OrderStatus.CANCELLED).ToString();
-        if (KpiCompleted!= null) KpiCompleted.Text = all.Count(r => r.Status == OrderStatus.COMPLETED).ToString();
-    }
 
     private void OnClearSearch(object s, RoutedEventArgs e)
     {
@@ -456,34 +443,6 @@ public partial class OrdersPage : Page
 
         MessageBox.Show($"Updated {successCount} of {totalCount} order(s) to {targetStatus}.",
             "Bulk Status Update", MessageBoxButton.OK, MessageBoxImage.Information);
-        LoadData();
-    }
-
-    private void OnBulkDeleteClick(object sender, RoutedEventArgs e)
-    {
-        var selected = _visibleRowVms.Where(r => r.IsSelected).ToList();
-        if (selected.Count == 0) return;
-
-        var totalOrders = selected.Sum(r => r.GroupedOrders.Count);
-        var res = MessageBox.Show(
-            $"Are you sure you want to delete {totalOrders} order(s)?\n\nThis will permanently delete their items, payments, and history. This cannot be undone.",
-            "Confirm Bulk Delete", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-
-        if (res != MessageBoxResult.Yes) return;
-
-        var svc = new OrderService(_db);
-        int deletedCount = 0;
-        foreach (var vm in selected)
-        {
-            foreach (var order in vm.GroupedOrders)
-            {
-                if (svc.Delete(order.Id))
-                    deletedCount++;
-            }
-        }
-
-        MessageBox.Show($"Successfully deleted {deletedCount} of {totalOrders} order(s).",
-            "Bulk Delete Complete", MessageBoxButton.OK, MessageBoxImage.Information);
         LoadData();
     }
 
@@ -839,18 +798,7 @@ public partial class OrdersPage : Page
             menu.Items.Add(printChecklistItem);
         }
 
-        // 7. Delete Order
-        var deleteItem = new MenuItem
-        {
-            Header = "Delete Order",
-            Icon = new MaterialDesignThemes.Wpf.PackIcon { Kind = MaterialDesignThemes.Wpf.PackIconKind.DeleteOutline, Width = 16, Height = 16 }
-        };
-        deleteItem.Click += (_, _) =>
-        {
-            menu.IsOpen = false;
-            Dispatcher.BeginInvoke(() => DeleteOrder(order));
-        };
-        menu.Items.Add(deleteItem);
+
 
         menu.PlacementTarget = btn;
         menu.IsOpen = true;
@@ -977,22 +925,7 @@ public partial class OrdersPage : Page
         }
     }
 
-    private void DeleteOrder(Order order)
-    {
-        var res = MessageBox.Show(
-            $"Are you sure you want to delete Order {order.OrderNo}?\n\nThis cannot be undone.",
-            "Delete Order", MessageBoxButton.YesNo, MessageBoxImage.Warning);
 
-        if (res == MessageBoxResult.Yes)
-        {
-            var svc = new OrderService(_db);
-            if (svc.Delete(order.Id))
-            {
-                MessageBox.Show($"Order {order.OrderNo} deleted.", "Deleted", MessageBoxButton.OK, MessageBoxImage.Information);
-                LoadData();
-            }
-        }
-    }
 
     private void ShowOrderDetail(int orderId)
     {

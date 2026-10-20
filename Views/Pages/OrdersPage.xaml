@@ -31,7 +31,6 @@
     <Grid Margin="18,14">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>  <!-- Header + Actions -->
-            <RowDefinition Height="Auto"/>  <!-- KPI Summary Cards -->
             <RowDefinition Height="Auto"/>  <!-- Filter Tabs + Search -->
             <RowDefinition Height="Auto"/>  <!-- Bulk Selection Panel -->
             <RowDefinition Height="*"/>     <!-- DataGrid -->
@@ -55,15 +54,6 @@
                         <TextBlock Text="+ NEW ORDER" FontSize="12" FontWeight="Bold" FontFamily="Segoe UI" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
-                <Button Click="OnPrintMenuClick" Style="{StaticResource Pos3DSecondaryBtn}"
-                        Height="38" Padding="12,0" Margin="0,0,8,0"
-                        ToolTip="Print purchase orders and buying checklists">
-                    <StackPanel Orientation="Horizontal">
-                        <md:PackIcon Kind="PrinterOutline" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                        <TextBlock Text="Print" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                        <md:PackIcon Kind="ChevronDown" Width="13" Height="13" VerticalAlignment="Center" Margin="3,0,0,0"/>
-                    </StackPanel>
-                </Button>
                 <Button Click="OnRefreshClick" Style="{StaticResource Pos3DSecondaryBtn}"
                         Width="38" Height="38" Padding="0" ToolTip="Refresh Purchase Orders">
                     <md:PackIcon Kind="Refresh" Width="17" Height="17" Foreground="{DynamicResource PosSecondaryText}"/>
@@ -71,82 +61,9 @@
             </StackPanel>
         </Grid>
 
-        <!-- ══ ROW 1: KPI SUMMARY CARDS ═════════════════════════════════════════ -->
-        <UniformGrid Grid.Row="1" Columns="5" Margin="0,0,0,12">
-            <!-- Total Orders -->
-            <Border Style="{StaticResource KpiCard}" Margin="0,0,8,0">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                        <Border Background="#EDE9FE" CornerRadius="6" Padding="5" Margin="0,0,8,0">
-                            <md:PackIcon Kind="ClipboardListOutline" Width="14" Height="14" Foreground="#6D28D9"/>
-                        </Border>
-                        <TextBlock Text="TOTAL ORDERS" FontSize="9.5" FontWeight="Bold"
-                                   Foreground="{DynamicResource PosSecondaryText}" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <TextBlock x:Name="KpiTotalOrders" Text="0" FontSize="22" FontWeight="Black"
-                               Foreground="{DynamicResource PosPrimaryText}" FontFamily="Segoe UI"/>
-                </StackPanel>
-            </Border>
-            <!-- Waiting to Buy -->
-            <Border Style="{StaticResource KpiCard}" Margin="0,0,8,0">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                        <Border Background="#FEF3C7" CornerRadius="6" Padding="5" Margin="0,0,8,0">
-                            <md:PackIcon Kind="ClockOutline" Width="14" Height="14" Foreground="#D97706"/>
-                        </Border>
-                        <TextBlock Text="WAITING" FontSize="9.5" FontWeight="Bold"
-                                   Foreground="{DynamicResource PosSecondaryText}" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <TextBlock x:Name="KpiWaiting" Text="0" FontSize="22" FontWeight="Black"
-                               Foreground="#D97706" FontFamily="Segoe UI"/>
-                </StackPanel>
-            </Border>
-            <!-- Buying -->
-            <Border Style="{StaticResource KpiCard}" Margin="0,0,8,0">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                        <Border Background="#DBEAFE" CornerRadius="6" Padding="5" Margin="0,0,8,0">
-                            <md:PackIcon Kind="ShoppingOutline" Width="14" Height="14" Foreground="#2563EB"/>
-                        </Border>
-                        <TextBlock Text="BUYING NOW" FontSize="9.5" FontWeight="Bold"
-                                   Foreground="{DynamicResource PosSecondaryText}" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <TextBlock x:Name="KpiBuying" Text="0" FontSize="22" FontWeight="Black"
-                               Foreground="#2563EB" FontFamily="Segoe UI"/>
-                </StackPanel>
-            </Border>
-            <!-- Unpaid -->
-            <Border Style="{StaticResource KpiCard}" Margin="0,0,8,0">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                        <Border Background="#FEE2E2" CornerRadius="6" Padding="5" Margin="0,0,8,0">
-                            <md:PackIcon Kind="CashRemove" Width="14" Height="14" Foreground="#DC2626"/>
-                        </Border>
-                        <TextBlock Text="UNPAID" FontSize="9.5" FontWeight="Bold"
-                                   Foreground="{DynamicResource PosSecondaryText}" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <TextBlock x:Name="KpiUnpaid" Text="0" FontSize="22" FontWeight="Black"
-                               Foreground="#DC2626" FontFamily="Segoe UI"/>
-                </StackPanel>
-            </Border>
-            <!-- Completed -->
-            <Border Style="{StaticResource KpiCard}">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                        <Border Background="#D1FAE5" CornerRadius="6" Padding="5" Margin="0,0,8,0">
-                            <md:PackIcon Kind="CheckCircleOutline" Width="14" Height="14" Foreground="#059669"/>
-                        </Border>
-                        <TextBlock Text="COMPLETED" FontSize="9.5" FontWeight="Bold"
-                                   Foreground="{DynamicResource PosSecondaryText}" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <TextBlock x:Name="KpiCompleted" Text="0" FontSize="22" FontWeight="Black"
-                               Foreground="#059669" FontFamily="Segoe UI"/>
-                </StackPanel>
-            </Border>
-        </UniformGrid>
 
         <!-- ══ ROW 2: FILTER TABS + SEARCH ══════════════════════════════════════ -->
-        <Border Grid.Row="2" Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}"
+        <Border Grid.Row="1" Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}"
                 BorderThickness="1" CornerRadius="10" Padding="8,6" Margin="0,0,0,8">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -189,7 +106,7 @@
         </Border>
 
         <!-- ══ ROW 3: BULK SELECTION TOOLBAR ════════════════════════════════════ -->
-        <Border x:Name="BulkSelectionPanel" Grid.Row="3" Background="{DynamicResource PosSurface}" CornerRadius="10"
+        <Border x:Name="BulkSelectionPanel" Grid.Row="2" Background="{DynamicResource PosSurface}" CornerRadius="10"
                 BorderBrush="{DynamicResource PosBorder}" BorderThickness="1" Padding="10,6" Margin="0,0,0,8"
                 Visibility="Collapsed">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -214,24 +131,11 @@
                         <TextBlock Text="Print" FontSize="11" FontWeight="SemiBold"/>
                     </StackPanel>
                 </Button>
-                <Button Style="{StaticResource Pos3DFilterBtn}" Height="30" Padding="10,0" Click="OnBulkMoreClick">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="More" FontSize="11" FontWeight="SemiBold"/>
-                        <md:PackIcon Kind="ChevronDown" Width="13" Height="13" VerticalAlignment="Center" Margin="3,0,0,0"/>
-                    </StackPanel>
-                    <Button.ContextMenu>
-                        <ContextMenu>
-                            <MenuItem Header="Select All Visible" Click="OnSelectAllClick"/>
-                            <Separator/>
-                            <MenuItem Header="Delete Selected Orders" Click="OnBulkDeleteClick" Foreground="#EF4444"/>
-                        </ContextMenu>
-                    </Button.ContextMenu>
-                </Button>
             </StackPanel>
         </Border>
 
-        <!-- ══ ROW 4: ORDERS DATAGRID ════════════════════════════════════════════ -->
-        <Border Grid.Row="4" Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}"
+        <!-- == ROW 3: ORDERS DATAGRID == -->
+        <Border Grid.Row="3" Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}"
                 BorderThickness="1" CornerRadius="10" Padding="2">
             <Grid>
                 <DataGrid x:Name="OrdersGrid"

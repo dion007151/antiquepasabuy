@@ -19,10 +19,8 @@ public partial class EditOrderDialog : Window
         _order = order;
         Loaded += (_, _) => PopulateData();
 
-        // Wire live recalc on all fee fields
+        // Wire live recalc on fee field
         ServiceFeeBox.TextChanged  += (_, _) => RecalcGrandTotalPreview();
-        DeliveryFeeBox.TextChanged += (_, _) => RecalcGrandTotalPreview();
-        DiscountBox.TextChanged    += (_, _) => RecalcGrandTotalPreview();
     }
 
     private void PopulateData()
@@ -81,8 +79,6 @@ public partial class EditOrderDialog : Window
         if (PaymentMethodCombo.SelectedItem == null) PaymentMethodCombo.SelectedIndex = 0;
 
         ServiceFeeBox.Text = _order.ServiceFee.ToString("F2");
-        DeliveryFeeBox.Text = _order.DeliveryFee.ToString("F2");
-        DiscountBox.Text = _order.Discount.ToString("F2");
         NotesBox.Text = _order.Notes ?? "";
         RecalcGrandTotalPreview();
     }
@@ -99,11 +95,9 @@ public partial class EditOrderDialog : Window
     private void RecalcGrandTotalPreview()
     {
         if (GrandTotalPreview is null) return;
-        decimal.TryParse(ServiceFeeBox.Text,  out var svc);
-        decimal.TryParse(DeliveryFeeBox.Text, out var del);
-        decimal.TryParse(DiscountBox.Text,    out var disc);
+        decimal.TryParse(ServiceFeeBox.Text, out var svc);
         var sub   = _order.ItemsSubtotal;
-        var total = sub + (svc >= 0 ? svc : 0) + (del >= 0 ? del : 0) - (disc >= 0 ? disc : 0);
+        var total = sub + (svc >= 0 ? svc : 0);
         GrandTotalPreview.Text = $"₱{(total > 0 ? total : 0m):N2}";
     }
 
@@ -131,18 +125,6 @@ public partial class EditOrderDialog : Window
             return;
         }
 
-        if (!decimal.TryParse(DeliveryFeeBox.Text, out var delFee) || delFee < 0)
-        {
-            ErrorLabel.Text = "Please enter a valid non-negative Delivery Fee.";
-            return;
-        }
-
-        if (!decimal.TryParse(DiscountBox.Text, out var discount) || discount < 0)
-        {
-            ErrorLabel.Text = "Please enter a valid non-negative Discount.";
-            return;
-        }
-
         var custId = CustomerCombo.SelectedValue is int cid && cid > 0 ? cid : (int?)null;
         if (!custId.HasValue)
         {
@@ -157,7 +139,7 @@ public partial class EditOrderDialog : Window
         var prefStore = string.IsNullOrWhiteSpace(StoreCombo.Text) ? "Robinsons Antique" : StoreCombo.Text.Trim();
 
         var svc = new OrderService(_db);
-        var (ok, msg) = svc.Update(_order.Id, custId, delivType, address, notes, svcFee, delFee, discount, buyingDay, prefStore);
+        var (ok, msg) = svc.Update(_order.Id, custId, delivType, address, notes, svcFee, 0m, 0m, buyingDay, prefStore);
         if (!ok)
         {
             ErrorLabel.Text = msg;

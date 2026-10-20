@@ -361,15 +361,6 @@
                                 <TextBlock Text="Pasabuy Fee:" Style="{StaticResource FinanceLabel}"/>
                                 <TextBlock x:Name="SvcFeeVal" Text="&#x20B1;0.00" Style="{StaticResource FinanceValue}"/>
                             </Grid>
-                            <Grid Margin="0,0,0,5">
-                                <TextBlock Text="Delivery Fee:" Style="{StaticResource FinanceLabel}"/>
-                                <TextBlock x:Name="DelFeeVal" Text="&#x20B1;0.00" Style="{StaticResource FinanceValue}"/>
-                            </Grid>
-                            <Grid Margin="0,0,0,5">
-                                <TextBlock Text="Discount:" Style="{StaticResource FinanceLabel}"/>
-                                <TextBlock x:Name="DiscountVal" Text="-&#x20B1;0.00" HorizontalAlignment="Right"
-                                           FontWeight="SemiBold" Foreground="#EF4444" FontSize="11.5" VerticalAlignment="Center"/>
-                            </Grid>
                             <!-- Grand Total highlighted panel -->
                             <Border Background="{DynamicResource PosPanel}" CornerRadius="8" Padding="10,8" Margin="0,4,0,8">
                                 <Grid>
@@ -534,15 +525,6 @@
                         <StackPanel Orientation="Horizontal">
                             <md:PackIcon Kind="Cancel" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,5,0"/>
                             <TextBlock Text="Cancel Order" FontSize="11.5" FontWeight="SemiBold"/>
-                        </StackPanel>
-                    </Button>
-                    <Button x:Name="DeleteOrderBtn" Click="OnDeleteOrder"
-                            Style="{StaticResource Pos3DDangerBtn}"
-                            Height="36" Padding="14,0" Margin="0,0,8,0"
-                            ToolTip="Permanently delete this purchase order">
-                        <StackPanel Orientation="Horizontal">
-                            <md:PackIcon Kind="DeleteOutline" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <TextBlock Text="Delete" FontSize="11.5" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Button>
                     <Button Content="Close" Click="OnClose" Style="{StaticResource Pos3DSecondaryBtn}"

@@ -97,33 +97,16 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Fees & Discount Row -->
+                <!-- Pasabuy Fee -->
                 <Grid Margin="0,0,0,12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="10"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="10"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0">
-                        <Grid Margin="0,0,0,4">
-                            <TextBlock Text="Pasabuy Fee (₱)" FontSize="11" FontWeight="SemiBold" Foreground="#475569" FontFamily="Segoe UI" VerticalAlignment="Center"/>
-                            <Button Content="Auto" Click="OnAutoCalcServiceFee"
-                                    Style="{StaticResource MaterialDesignFlatButton}"
-                                    HorizontalAlignment="Right" Height="18" Padding="4,0" FontSize="9.5" FontWeight="Bold"
-                                    Foreground="#0F766E" ToolTip="Auto-calculate Pasabuy Fee based on items subtotal and official rate table"/>
-                        </Grid>
-                        <TextBox x:Name="ServiceFeeBox" Style="{StaticResource MaterialDesignOutlinedTextBox}" FontSize="13"/>
-                    </StackPanel>
-                    <StackPanel Grid.Column="2">
-                        <TextBlock Text="Delivery Fee (₱)" FontSize="11" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,4" FontFamily="Segoe UI"/>
-                        <TextBox x:Name="DeliveryFeeBox" Style="{StaticResource MaterialDesignOutlinedTextBox}" FontSize="13"/>
-                    </StackPanel>
-                    <StackPanel Grid.Column="4">
-                        <TextBlock Text="Discount (₱)" FontSize="11" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,4" FontFamily="Segoe UI"/>
-                        <TextBox x:Name="DiscountBox" Style="{StaticResource MaterialDesignOutlinedTextBox}" FontSize="13"/>
-                    </StackPanel>
+                    <Grid Margin="0,0,0,4">
+                        <TextBlock Text="Pasabuy Fee (₱)" FontSize="11" FontWeight="SemiBold" Foreground="#475569" FontFamily="Segoe UI" VerticalAlignment="Center"/>
+                        <Button Content="Auto" Click="OnAutoCalcServiceFee"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                HorizontalAlignment="Right" Height="18" Padding="4,0" FontSize="9.5" FontWeight="Bold"
+                                Foreground="#0F766E" ToolTip="Auto-calculate Pasabuy Fee based on items subtotal and official rate table"/>
+                    </Grid>
+                    <TextBox x:Name="ServiceFeeBox" Style="{StaticResource MaterialDesignOutlinedTextBox}" FontSize="13" Margin="0,24,0,0"/>
                 </Grid>
 
                 <!-- Notes -->
@@ -145,7 +128,7 @@
                         <StackPanel>
                             <TextBlock Text="Estimated Grand Total" FontSize="11" FontWeight="SemiBold"
                                        Foreground="#64748B" FontFamily="Segoe UI"/>
-                            <TextBlock Text="Subtotal + Pasabuy Fee + Delivery Fee - Discount" FontSize="10"
+                            <TextBlock Text="Subtotal + Pasabuy Fee" FontSize="10"
                                        Foreground="#94A3B8" FontFamily="Segoe UI"/>
                         </StackPanel>
                         <TextBlock x:Name="GrandTotalPreview" Grid.Column="1"
