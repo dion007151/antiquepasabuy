@@ -1,0 +1,246 @@
+<Application x:Class="AntiquePasabuyPOS.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:conv="clr-namespace:AntiquePasabuyPOS.Converters"
+             xmlns:pages="clr-namespace:AntiquePasabuyPOS.Views.Pages">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <md:BundledTheme BaseTheme="Light" PrimaryColor="Indigo" SecondaryColor="DeepPurple" />
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign3.Defaults.xaml" />
+                <ResourceDictionary Source="Themes/Pos3DButtons.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <!-- Global converters — available to every page, DataGrid, and DataTemplate -->
+            <conv:OrderStatusColorConverter   x:Key="StatusColorConv"/>
+            <conv:OrderStatusTextConverter    x:Key="StatusTextConv"/>
+            <conv:OrderStatusTooltipConverter x:Key="StatusTooltipConv"/>
+            <conv:ItemStatusColorConverter    x:Key="ItemStatusColorConv"/>
+            <conv:DifferenceColorConverter    x:Key="DifferenceColorConv"/>
+            <conv:CategoryColorConverter      x:Key="CatColorConv"/>
+            <conv:CategoryLightColorConverter x:Key="CatLightColorConv"/>
+            <pages:ActiveColorConverter       x:Key="ActiveColorConv"/>
+            <pages:ActiveTextConverter        x:Key="ActiveTextConv"/>
+            <!-- Payment Method converters -->
+            <conv:PaymentMethodTextConverter  x:Key="PaymentMethodTextConv"/>
+            <conv:PaymentMethodBgConverter    x:Key="PaymentMethodBgConv"/>
+            <conv:PaymentMethodFgConverter    x:Key="PaymentMethodFgConv"/>
+            <!-- Pasabuy Fee converters -->
+            <conv:FeeExemptTextConverter      x:Key="FeeExemptTextConv"/>
+            <conv:FeeExemptColorConverter     x:Key="FeeExemptColorConv"/>
+            <!-- Payment Status converters -->
+            <conv:PaymentStatusColorConverter   x:Key="PaymentStatusColorConv"/>
+            <conv:PaymentStatusTextConverter    x:Key="PaymentStatusTextConv"/>
+            <conv:PaymentStatusTooltipConverter x:Key="PaymentStatusTooltipConv"/>
+
+            <!-- ═════════════════════════════════════════════════════════════════ -->
+            <!-- GLOBAL POS THEME BRUSHES — DIONIX POS OFFICIAL DESIGN SYSTEM       -->
+            <!-- ═════════════════════════════════════════════════════════════════ -->
+            <SolidColorBrush x:Key="PosBackground"    Color="#F5F7FB"/>
+            <SolidColorBrush x:Key="PosSurface"       Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="PosPanel"         Color="#EDE9FE"/>
+            <SolidColorBrush x:Key="PosPrimary"       Color="#452B86"/>
+            <SolidColorBrush x:Key="PosSecondary"     Color="#5B43E8"/>
+            <SolidColorBrush x:Key="PosLightBlue"     Color="#EDE9FE"/>
+            <SolidColorBrush x:Key="PosLightPurple"   Color="#EDE9FE"/>
+            <SolidColorBrush x:Key="PosPrimaryText"   Color="#20263A"/>
+            <SolidColorBrush x:Key="PosSecondaryText" Color="#647089"/>
+            <SolidColorBrush x:Key="PosMutedText"     Color="#647089"/>
+            <SolidColorBrush x:Key="PosBorder"        Color="#E1E6EF"/>
+            <SolidColorBrush x:Key="PosInput"         Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="PosInputText"     Color="#20263A"/>
+            <SolidColorBrush x:Key="PosTableHeader"   Color="#F5F7FB"/>
+            <SolidColorBrush x:Key="PosTableRow"      Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="PosAlternateRow"  Color="#F8FAFC"/>
+            <SolidColorBrush x:Key="PosSuccess"       Color="#16A34A"/>
+            <SolidColorBrush x:Key="PosWarning"       Color="#D97706"/>
+            <SolidColorBrush x:Key="PosDanger"        Color="#DC2626"/>
+            <SolidColorBrush x:Key="PosInfo"          Color="#5B43E8"/>
+            <SolidColorBrush x:Key="PosSidebar"       Color="#10182B"/>
+
+            <!-- ═════════════════════════════════════════════════════════════════ -->
+            <!-- GLOBAL SEGOE UI TYPOGRAPHY HIERARCHY STYLES                      -->
+            <!-- ═════════════════════════════════════════════════════════════════ -->
+            <Style x:Key="PosAppTitleStyle" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="Segoe UI"/>
+                <Setter Property="FontSize" Value="20"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+                <Setter Property="Foreground" Value="{DynamicResource PosPrimaryText}"/>
+            </Style>
+
+            <Style x:Key="PosSectionTitleStyle" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="Segoe UI"/>
+                <Setter Property="FontSize" Value="16"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Foreground" Value="{DynamicResource PosPrimaryText}"/>
+            </Style>
+
+            <Style x:Key="PosCardTitleStyle" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="Segoe UI"/>
+                <Setter Property="FontSize" Value="14"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Foreground" Value="{DynamicResource PosPrimaryText}"/>
+            </Style>
+
+            <Style x:Key="PosNormalTextStyle" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="Segoe UI"/>
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="FontWeight" Value="Normal"/>
+                <Setter Property="Foreground" Value="{DynamicResource PosPrimaryText}"/>
+            </Style>
+
+            <Style x:Key="PosSecondaryTextStyle" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="Segoe UI"/>
+                <Setter Property="FontSize" Value="11.5"/>
+                <Setter Property="FontWeight" Value="Normal"/>
+                <Setter Property="Foreground" Value="{DynamicResource PosSecondaryText}"/>
+            </Style>
+
+            <Style x:Key="PosGrandTotalStyle" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="Segoe UI"/>
+                <Setter Property="FontSize" Value="24"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+                <Setter Property="Foreground" Value="{DynamicResource PosPrimary}"/>
+            </Style>
+
+            <!-- ═════════════════════════════════════════════════════════════════ -->
+            <!-- GLOBAL CRISP SYSTEM-WIDE RENDERING RULES                          -->
+            <!-- Prevents blurriness, ensures ClearType display text & sharp edges  -->
+            <!-- ═════════════════════════════════════════════════════════════════ -->
+            <Style TargetType="Window">
+                <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+                <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+                <Setter Property="RenderOptions.ClearTypeHint" Value="Enabled"/>
+                <Setter Property="UseLayoutRounding" Value="True"/>
+                <Setter Property="SnapsToDevicePixels" Value="True"/>
+            </Style>
+
+            <Style TargetType="Page">
+                <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+                <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+                <Setter Property="RenderOptions.ClearTypeHint" Value="Enabled"/>
+                <Setter Property="UseLayoutRounding" Value="True"/>
+                <Setter Property="SnapsToDevicePixels" Value="True"/>
+            </Style>
+
+            <Style TargetType="TextBlock">
+                <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+                <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+            </Style>
+
+            <!-- ═════════════════════════════════════════════════════════════════ -->
+            <!-- GLOBAL BUTTON BASE STYLE (Universal Auto-sizing & Padding)        -->
+            <!-- ═════════════════════════════════════════════════════════════════ -->
+            <Style TargetType="Button">
+                <Setter Property="SnapsToDevicePixels" Value="True"/>
+                <Setter Property="UseLayoutRounding" Value="True"/>
+                <Setter Property="MinHeight" Value="36"/>
+                <Setter Property="MinWidth" Value="68"/>
+                <Setter Property="Padding" Value="12,6"/>
+                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+                <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+                <Setter Property="RenderOptions.ClearTypeHint" Value="Enabled"/>
+            </Style>
+
+            <!-- ═════════════════════════════════════════════════════════════════ -->
+            <!-- GLOBAL DATAGRID ROW & CELL STYLES (No Vertical Clipping)          -->
+            <!-- ═════════════════════════════════════════════════════════════════ -->
+            <Style TargetType="DataGrid" BasedOn="{StaticResource MaterialDesignDataGrid}">
+                <Setter Property="MinRowHeight" Value="46"/>
+                <Setter Property="SnapsToDevicePixels" Value="True"/>
+                <Setter Property="UseLayoutRounding" Value="True"/>
+                <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+                <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+                <Setter Property="RenderOptions.ClearTypeHint" Value="Enabled"/>
+                <Setter Property="EnableRowVirtualization" Value="True"/>
+                <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True"/>
+                <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling"/>
+                <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel"/>
+                <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
+            </Style>
+
+            <Style TargetType="DataGridRow" BasedOn="{StaticResource MaterialDesignDataGridRow}">
+                <Setter Property="MinHeight" Value="46"/>
+                <Setter Property="SnapsToDevicePixels" Value="True"/>
+                <Setter Property="UseLayoutRounding" Value="True"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+            </Style>
+
+            <Style TargetType="DataGridCell" BasedOn="{StaticResource MaterialDesignDataGridCell}">
+                <Setter Property="SnapsToDevicePixels" Value="True"/>
+                <Setter Property="UseLayoutRounding" Value="True"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                <Setter Property="Padding" Value="10,0"/>
+            </Style>
+
+            <!-- Global DataGridColumnHeader: vertically centered, consistent height -->
+            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource MaterialDesignDataGridColumnHeader}">
+                <Setter Property="Height" Value="40"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                <Setter Property="Padding" Value="10,0"/>
+                <Setter Property="FontSize" Value="11.5"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+                <Setter Property="FontFamily" Value="Segoe UI"/>
+                <Setter Property="Foreground" Value="{DynamicResource PosSecondaryText}"/>
+                <Setter Property="SnapsToDevicePixels" Value="True"/>
+                <Setter Property="UseLayoutRounding" Value="True"/>
+            </Style>
+
+            <!-- Global TextBlock inside DataGrid cells: always centered vertically -->
+            <Style x:Key="PosDataGridCellText" TargetType="TextBlock">
+                <Setter Property="VerticalAlignment" Value="Center"/>
+                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                <Setter Property="FontFamily" Value="Segoe UI"/>
+                <Setter Property="FontSize" Value="12.5"/>
+                <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+                <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+            </Style>
+
+            <!-- ═════════════════════════════════════════════════════════════════ -->
+            <!-- UNIVERSAL COMBOBOX & COMBOBOXITEM CONTRAST PROTECTION             -->
+            <!-- Ensures dropdown items NEVER have white text on light backgrounds  -->
+            <!-- ═════════════════════════════════════════════════════════════════ -->
+            <Style TargetType="ComboBoxItem">
+                <Setter Property="SnapsToDevicePixels" Value="True"/>
+                <Setter Property="Padding" Value="10,7"/>
+                <Setter Property="Background" Value="{DynamicResource PosSurface}"/>
+                <Setter Property="Foreground" Value="{DynamicResource PosPrimaryText}"/>
+                <Setter Property="FontFamily" Value="Segoe UI"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ComboBoxItem">
+                            <Border x:Name="Bd"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    Padding="{TemplateBinding Padding}"
+                                    SnapsToDevicePixels="True">
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsHighlighted" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource PosPanel}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource PosPrimary}"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource PosPanel}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource PosPrimary}"/>
+                                    <Setter Property="FontWeight" Value="Bold"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Foreground" Value="{DynamicResource PosMutedText}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

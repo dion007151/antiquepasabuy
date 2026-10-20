@@ -1,0 +1,225 @@
+<Window x:Class="AntiquePasabuyPOS.Views.LoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:lottie="clr-namespace:LottieSharp.WPF;assembly=LottieSharp"
+        Title="DIONIX POS — Sign In"
+        Icon="pack://application:,,,/Assets/dionix_icon.ico"
+        Width="1020" Height="640"
+        MinWidth="900" MinHeight="560"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResize"
+        Background="#F7F6FA"
+        FontFamily="Segoe UI"
+        Style="{StaticResource MaterialDesignWindow}">
+
+    <Window.Resources>
+        <!-- Login button — colors driven from code-behind via ApplyBusinessProfile() -->
+        <Style x:Key="DionixLoginBtnStyle" TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="MinHeight" Value="46"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="UseLayoutRounding" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="BtnBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Margin="16,8"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="BtnBorder" Property="Background" Value="#94A3B8"/>
+                                <Setter TargetName="BtnBorder" Property="BorderBrush" Value="#94A3B8"/>
+                                <Setter Property="Opacity" Value="0.6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <!-- LEFT PANEL: ~45% for Lottie animation & branding -->
+            <ColumnDefinition Width="45*" MinWidth="380"/>
+            <!-- RIGHT PANEL: ~55% for clean sign-in workspace -->
+            <ColumnDefinition Width="55*" MinWidth="440"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <!-- LEFT: BUSINESS LOTTIE ANIMATION PANEL (colors set from code-behind) -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <Grid x:Name="LeftPanelGrid" Grid.Column="0" ClipToBounds="True" Background="#241548">
+
+            <!-- Radial Gradient Glow — updated dynamically in ApplyBusinessProfile() -->
+            <Border x:Name="LeftPanelGlowBorder"/>
+
+            <!-- ── Lottie Animation — FileName set from code-behind ─────────── -->
+            <lottie:LottieAnimationView x:Name="LottiePlayer"
+                                        HorizontalAlignment="Stretch"
+                                        VerticalAlignment="Stretch"
+                                        Margin="24,20,24,150"
+                                        AutoPlay="True"
+                                        RepeatCount="-1"
+                                        FileName="Business team.json"/>
+
+            <!-- Bottom gradient overlay — updated dynamically -->
+            <Border x:Name="BottomGradientBorder" VerticalAlignment="Bottom" Height="140"/>
+
+            <!-- Branding texts — updated dynamically in ApplyBusinessProfile() -->
+            <StackPanel VerticalAlignment="Bottom" Margin="40,0,40,36">
+                <TextBlock x:Name="BrandingTitle"
+                           Text="DIONIX POS"
+                           Foreground="#FFFFFF"
+                           FontSize="28"
+                           FontWeight="Bold"
+                           FontFamily="Segoe UI"/>
+
+                <TextBlock x:Name="BrandingSubtitle"
+                           Text="Pasabuy · Delivery · Retail"
+                           Foreground="#F1EDFA"
+                           FontSize="15"
+                           FontWeight="SemiBold"
+                           Margin="0,4,0,10"
+                           FontFamily="Segoe UI"/>
+
+                <Rectangle Height="1"
+                           Fill="#40FFFFFF"
+                           HorizontalAlignment="Left"
+                           Width="48"
+                           Margin="0,0,0,10"/>
+
+                <TextBlock x:Name="BrandingTagline"
+                           Text="Your Orders. Our Hands. Delivered."
+                           Foreground="#A59EC0"
+                           FontSize="12.5"
+                           FontFamily="Segoe UI"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <!-- RIGHT: CLEAN BUSINESS SIGN IN WORKSPACE                            -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <Grid Grid.Column="1" Background="#FFFFFF">
+            <!-- Clean divider line -->
+            <Border HorizontalAlignment="Left" Width="1" Background="#EDE8F5"/>
+
+            <!-- Centered, Focused Workspace Container -->
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="360" Margin="32">
+
+                <!-- Header -->
+                <TextBlock Text="Welcome Back"
+                           FontSize="26"
+                           FontWeight="Bold"
+                           Foreground="#1F1B2D"
+                           FontFamily="Segoe UI"
+                           Margin="0,0,0,4"/>
+
+                <TextBlock Text="Sign in to continue"
+                           Foreground="#716B80"
+                           FontSize="13.5"
+                           FontFamily="Segoe UI"
+                           Margin="0,0,0,24"/>
+
+                <!-- Error Banner -->
+                <Border x:Name="ErrorBanner"
+                        Visibility="Collapsed"
+                        Background="#FEF2F2"
+                        BorderBrush="#FCA5A5"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="12,10"
+                        Margin="0,0,0,20">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <md:PackIcon Kind="AlertCircleOutline"
+                                     Width="18" Height="18"
+                                     Foreground="#DC2626"
+                                     VerticalAlignment="Center"
+                                     Margin="0,0,8,0"/>
+                        <TextBlock x:Name="ErrorText"
+                                   Grid.Column="1"
+                                   Foreground="#DC2626"
+                                   FontSize="13"
+                                   FontWeight="Medium"
+                                   TextWrapping="Wrap"
+                                   VerticalAlignment="Center"
+                                   FontFamily="Segoe UI"/>
+                    </Grid>
+                </Border>
+
+                <!-- Username Input -->
+                <TextBlock Text="USERNAME"
+                           FontSize="11.5"
+                           FontWeight="SemiBold"
+                           Foreground="#716B80"
+                           FontFamily="Segoe UI"
+                           Margin="0,0,0,6"/>
+                <TextBox x:Name="UsernameBox"
+                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                         md:HintAssist.Hint="Enter username"
+                         FontSize="14"
+                         MinHeight="46"
+                         Padding="14,11"
+                         Margin="0,0,0,18"
+                         KeyDown="OnKeyDown"
+                         TabIndex="0"/>
+
+                <!-- Password Input -->
+                <TextBlock Text="PASSWORD"
+                           FontSize="11.5"
+                           FontWeight="SemiBold"
+                           Foreground="#716B80"
+                           FontFamily="Segoe UI"
+                           Margin="0,0,0,6"/>
+                <PasswordBox x:Name="PasswordBox"
+                             Style="{StaticResource MaterialDesignOutlinedPasswordBox}"
+                             md:HintAssist.Hint="Enter password"
+                             FontSize="14"
+                             MinHeight="46"
+                             Padding="14,11"
+                             Margin="0,0,0,26"
+                             KeyDown="OnKeyDown"
+                             TabIndex="1"/>
+
+                <!-- Primary Action Button — background set from code-behind -->
+                <Button x:Name="LoginBtn"
+                        Style="{StaticResource DionixLoginBtnStyle}"
+                        MinHeight="46"
+                        Click="OnLoginClick"
+                        TabIndex="2">
+                    <TextBlock Text="SIGN IN →"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Foreground="#FFFFFF"
+                               FontFamily="Segoe UI"/>
+                </Button>
+
+                <!-- Quiet Footnote -->
+                <TextBlock Text="Offline • Local data"
+                           Foreground="#716B80"
+                           FontSize="11.5"
+                           FontFamily="Segoe UI"
+                           HorizontalAlignment="Center"
+                           Margin="0,24,0,0"/>
+
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

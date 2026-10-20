@@ -1,0 +1,214 @@
+<Page x:Class="AntiquePasabuyPOS.Views.Pages.RestoDashboardPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+      Background="{DynamicResource PosBackground}"
+      SnapsToDevicePixels="True"
+      UseLayoutRounding="True">
+
+    <Page.Resources>
+        <Style x:Key="KpiCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource PosSurface}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource PosBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,14"/>
+        </Style>
+    </Page.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="20,16">
+
+            <!-- ══ HEADER & HERO ACTION ════════════════════════════════════ -->
+            <Grid Margin="0,0,0,18">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock x:Name="GreetingLabel" Text="Angelito's Bar &amp; Resto Grill Dashboard"
+                               FontSize="20" FontWeight="Bold"
+                               Foreground="{DynamicResource PosPrimaryText}" FontFamily="Segoe UI"/>
+                    <TextBlock Text="Live restaurant overview: sales, occupied tables, and kitchen status."
+                               FontSize="12" Foreground="{DynamicResource PosSecondaryText}"
+                               FontFamily="Segoe UI" Margin="0,3,0,0"/>
+                </StackPanel>
+
+                <!-- + NEW SALE -->
+                <Button Grid.Column="1" Click="OnNewSaleClick"
+                        Style="{StaticResource Pos3DPrimaryBtn}"
+                        Height="42" Padding="18,0" Cursor="Hand"
+                        ToolTip="Create a new restaurant sale">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <md:PackIcon Kind="CashRegister" Width="18" Height="18"
+                                     VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="+ NEW SALE" FontWeight="Bold" FontSize="12.5"
+                                   FontFamily="Segoe UI" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+
+            <!-- ══ RESTAURANT KPI CARDS ═════════════════════════════════════ -->
+            <Grid Margin="0,0,0,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="14"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="14"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="14"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- KPI 1: Today's Sales -->
+                <Border Grid.Column="0" Style="{StaticResource KpiCardStyle}">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <Border Background="{DynamicResource PosPanel}" CornerRadius="6" Padding="6" Margin="0,0,8,0">
+                                <md:PackIcon Kind="CurrencyPhp" Width="18" Height="18" Foreground="{DynamicResource PosPrimary}"/>
+                            </Border>
+                            <TextBlock Text="TODAY'S REVENUE" FontSize="11" FontWeight="Bold"
+                                       Foreground="{DynamicResource PosSecondaryText}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock x:Name="TxtTodaySales" Text="₱0.00" FontSize="22" FontWeight="Bold"
+                                   Foreground="{DynamicResource PosPrimaryText}"/>
+                        <TextBlock x:Name="TxtSalesCount" Text="0 sales recorded today" FontSize="11"
+                                   Foreground="{DynamicResource PosMutedText}" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- KPI 2: Active Dine-in Tables -->
+                <Border Grid.Column="2" Style="{StaticResource KpiCardStyle}">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <Border Background="{DynamicResource PosPanel}" CornerRadius="6" Padding="6" Margin="0,0,8,0">
+                                <md:PackIcon Kind="TableChair" Width="18" Height="18" Foreground="{DynamicResource PosPrimary}"/>
+                            </Border>
+                            <TextBlock Text="OCCUPIED TABLES" FontSize="11" FontWeight="Bold"
+                                       Foreground="{DynamicResource PosSecondaryText}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock x:Name="TxtOccupiedTables" Text="0 / 7" FontSize="22" FontWeight="Bold"
+                                   Foreground="{DynamicResource PosPrimaryText}"/>
+                        <TextBlock x:Name="TxtAvailableTables" Text="7 tables available" FontSize="11"
+                                   Foreground="{DynamicResource PosMutedText}" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- KPI 3: Orders -->
+                <Border Grid.Column="4" Style="{StaticResource KpiCardStyle}">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <Border Background="{DynamicResource PosPanel}" CornerRadius="6" Padding="6" Margin="0,0,8,0">
+                                <md:PackIcon Kind="ClipboardListOutline" Width="18" Height="18" Foreground="{DynamicResource PosPrimary}"/>
+                            </Border>
+                            <TextBlock Text="PENDING ORDERS" FontSize="11" FontWeight="Bold"
+                                       Foreground="{DynamicResource PosSecondaryText}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock x:Name="TxtKitchenOrders" Text="0" FontSize="22" FontWeight="Bold"
+                                   Foreground="{DynamicResource PosPrimaryText}"/>
+                        <TextBlock Text="Active orders in progress" FontSize="11"
+                                   Foreground="{DynamicResource PosMutedText}" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- KPI 4: Menu Items -->
+                <Border Grid.Column="6" Style="{StaticResource KpiCardStyle}">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <Border Background="{DynamicResource PosPanel}" CornerRadius="6" Padding="6" Margin="0,0,8,0">
+                                <md:PackIcon Kind="SilverwareForkKnife" Width="18" Height="18" Foreground="{DynamicResource PosPrimary}"/>
+                            </Border>
+                            <TextBlock Text="ACTIVE DISHES" FontSize="11" FontWeight="Bold"
+                                       Foreground="{DynamicResource PosSecondaryText}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock x:Name="TxtMenuItemsCount" Text="10" FontSize="22" FontWeight="Bold"
+                                   Foreground="{DynamicResource PosPrimaryText}"/>
+                        <TextBlock Text="Grill, Sizzling, Drinks &amp; Bar" FontSize="11"
+                                   Foreground="{DynamicResource PosMutedText}" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- ══ QUICK SECTION: TABLES & RECENT SALES ═════════════════════ -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="3*"/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="4*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Left: Tables Quick Status -->
+                <Border Grid.Column="0" Background="{DynamicResource PosSurface}"
+                        BorderBrush="{DynamicResource PosBorder}" BorderThickness="1"
+                        CornerRadius="8" Padding="16">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,12">
+                            <TextBlock Text="Dining Floor Status" FontSize="14" FontWeight="Bold"
+                                       Foreground="{DynamicResource PosPrimaryText}"/>
+                            <Button HorizontalAlignment="Right" Content="View Tables →"
+                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                    Foreground="{DynamicResource PosPrimary}" Click="OnViewTablesClick"
+                                    Height="28" Padding="8,0" FontSize="11.5"/>
+                        </Grid>
+                        <ItemsControl x:Name="TablesItemsControl">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource PosPanel}"
+                                            BorderBrush="{DynamicResource PosBorder}"
+                                            BorderThickness="1" CornerRadius="6"
+                                            Padding="10,8" Margin="4" MinWidth="90">
+                                        <StackPanel HorizontalAlignment="Center">
+                                            <TextBlock Text="{Binding TableNumber}" FontWeight="Bold" FontSize="13"
+                                                       Foreground="{DynamicResource PosPrimaryText}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Status}" FontSize="10.5"
+                                                       Foreground="{DynamicResource PosSecondaryText}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Capacity, StringFormat='{}Cap: {0}'}" FontSize="10"
+                                                       Foreground="{DynamicResource PosMutedText}" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Right: Recent Sales -->
+                <Border Grid.Column="2" Background="{DynamicResource PosSurface}"
+                        BorderBrush="{DynamicResource PosBorder}" BorderThickness="1"
+                        CornerRadius="8" Padding="16">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,12">
+                            <TextBlock Text="Recent Restaurant Sales" FontSize="14" FontWeight="Bold"
+                                       Foreground="{DynamicResource PosPrimaryText}"/>
+                            <Button HorizontalAlignment="Right" Content="Open POS →"
+                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                    Foreground="{DynamicResource PosPrimary}" Click="OnNewSaleClick"
+                                    Height="28" Padding="8,0" FontSize="11.5"/>
+                        </Grid>
+                        <DataGrid x:Name="RecentSalesGrid" AutoGenerateColumns="False"
+                                  IsReadOnly="True" HeadersVisibility="Column"
+                                  MaxHeight="260"
+                                  Background="Transparent" BorderThickness="0"
+                                  RowBackground="{DynamicResource PosSurface}"
+                                  AlternatingRowBackground="{DynamicResource PosTableRow}">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Sale No" Binding="{Binding SaleNo}" Width="120"/>
+                                <DataGridTextColumn Header="Table" Binding="{Binding TableNumber}" Width="70"/>
+                                <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="*"/>
+                                <DataGridTextColumn Header="Amount" Binding="{Binding TotalAmount, StringFormat='₱{0:N2}'}" Width="90"/>
+                                <DataGridTextColumn Header="Payment" Binding="{Binding PaymentMethod}" Width="80"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>

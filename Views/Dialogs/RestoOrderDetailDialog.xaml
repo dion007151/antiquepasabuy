@@ -1,0 +1,138 @@
+<Window x:Class="AntiquePasabuyPOS.Views.Dialogs.RestoOrderDetailDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Restaurant Order &amp; Receipt Details"
+        Width="580" Height="680" MinWidth="520" MinHeight="600"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResizeWithGrip"
+        Style="{StaticResource MaterialDesignWindow}"
+        Background="{DynamicResource PosBackground}"
+        SnapsToDevicePixels="True" UseLayoutRounding="True">
+
+    <Window.Resources>
+        <Style TargetType="DataGridCell" BasedOn="{StaticResource MaterialDesignDataGridCell}">
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="8,4"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="20,16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Header -->
+            <RowDefinition Height="Auto"/> <!-- Meta info pill -->
+            <RowDefinition Height="*"/>    <!-- Items DataGrid -->
+            <RowDefinition Height="Auto"/> <!-- Totals & Breakdown -->
+            <RowDefinition Height="Auto"/> <!-- Bottom Actions -->
+        </Grid.RowDefinitions>
+
+        <!-- ══ 0. HEADER ═════════════════════════════════════════════════════ -->
+        <Grid Grid.Row="0" Margin="0,0,0,12">
+            <StackPanel VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock x:Name="TxtSaleNo" Text="RESTO-20261002-0001" FontSize="18" FontWeight="Bold"
+                               Foreground="{DynamicResource PosPrimaryText}" FontFamily="Segoe UI" Margin="0,0,10,0"/>
+                    <Border x:Name="StatusBadge" CornerRadius="4" Padding="8,3" Background="#22C55E20">
+                        <TextBlock x:Name="TxtStatus" Text="PAID" Foreground="#22C55E" FontSize="11" FontWeight="Bold"/>
+                    </Border>
+                </StackPanel>
+                <TextBlock x:Name="TxtTimestamp" Text="Date &amp; Time: Oct 02, 2026 06:30 PM" FontSize="11.5"
+                           Foreground="{DynamicResource PosSecondaryText}" Margin="0,2,0,0"/>
+            </StackPanel>
+
+            <Button HorizontalAlignment="Right" Click="OnCloseClick"
+                    Style="{StaticResource MaterialDesignFlatButton}"
+                    Padding="6,4" Foreground="{DynamicResource PosMutedText}">
+                <md:PackIcon Kind="Close" Width="18" Height="18"/>
+            </Button>
+        </Grid>
+
+        <!-- ══ 1. META INFO PILL ═════════════════════════════════════════════ -->
+        <Border Grid.Row="1" Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}"
+                BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="TABLE &amp; SEATING" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource PosMutedText}"/>
+                    <TextBlock x:Name="TxtTableInfo" Text="Table T-01 (Main Dining)" FontSize="13" FontWeight="Bold"
+                               Foreground="{DynamicResource PosPrimaryText}" Margin="0,2,0,0"/>
+                    <TextBlock x:Name="TxtCustomerInfo" Text="Guest: Juan Dela Cruz" FontSize="11.5"
+                               Foreground="{DynamicResource PosSecondaryText}" Margin="0,2,0,0"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1">
+                    <TextBlock Text="SERVER / CASHIER" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource PosMutedText}"/>
+                    <TextBlock x:Name="TxtCashierInfo" Text="Cashier: Admin" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource PosPrimaryText}" Margin="0,2,0,0"/>
+                    <TextBlock x:Name="TxtPaymentMethod" Text="Payment: GCash" FontSize="11.5"
+                               Foreground="{DynamicResource PosSecondaryText}" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ══ 2. ITEMIZED DISHES & DRINKS GRID ══════════════════════════════ -->
+        <Border Grid.Row="2" Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}"
+                BorderThickness="1" CornerRadius="8" Padding="8" Margin="0,0,0,12">
+            <DataGrid x:Name="ItemsGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                      HeadersVisibility="Column" Background="Transparent" BorderThickness="0"
+                      RowBackground="{DynamicResource PosSurface}"
+                      AlternatingRowBackground="{DynamicResource PosTableRow}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Item / Dish" Binding="{Binding ItemName}" Width="*" FontWeight="SemiBold"/>
+                    <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="90"/>
+                    <DataGridTextColumn Header="Qty" Binding="{Binding Quantity, StringFormat='{}{0:N0}'}" Width="50"/>
+                    <DataGridTextColumn Header="Unit Price" Binding="{Binding UnitPrice, StringFormat='₱{0:N2}'}" Width="85"/>
+                    <DataGridTextColumn Header="Subtotal" Binding="{Binding Subtotal, StringFormat='₱{0:N2}'}" Width="85" FontWeight="Bold"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
+        <!-- ══ 3. TOTALS & SETTLEMENT BREAKDOWN ══════════════════════════════ -->
+        <Border Grid.Row="3" Background="{DynamicResource PosPanel}" BorderBrush="{DynamicResource PosBorder}"
+                BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,14">
+            <StackPanel>
+                <Grid Margin="0,2">
+                    <TextBlock Text="Subtotal:" Foreground="{DynamicResource PosSecondaryText}" FontSize="12"/>
+                    <TextBlock x:Name="TxtSubtotal" Text="₱0.00" HorizontalAlignment="Right"
+                               FontWeight="SemiBold" Foreground="{DynamicResource PosPrimaryText}" FontSize="12"/>
+                </Grid>
+                <Grid Margin="0,2">
+                    <TextBlock Text="Discount Applied:" Foreground="{DynamicResource PosSecondaryText}" FontSize="12"/>
+                    <TextBlock x:Name="TxtDiscount" Text="₱0.00" HorizontalAlignment="Right"
+                               FontWeight="SemiBold" Foreground="#DC2626" FontSize="12"/>
+                </Grid>
+                <Separator Margin="0,6" Background="{DynamicResource PosBorder}"/>
+                <Grid Margin="0,2">
+                    <TextBlock Text="TOTAL PAID:" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource PosPrimaryText}"/>
+                    <TextBlock x:Name="TxtGrandTotal" Text="₱0.00" HorizontalAlignment="Right"
+                               FontSize="17" FontWeight="Bold" Foreground="{DynamicResource PosPrimary}"/>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- ══ 4. BOTTOM ACTIONS ═════════════════════════════════════════════ -->
+        <Grid Grid.Row="4">
+            <Button HorizontalAlignment="Left" Click="OnDeleteOrderClick"
+                    Background="#FEE2E2" BorderBrush="#EF4444" BorderThickness="1"
+                    Foreground="#DC2626" Height="36" Padding="14,0" Cursor="Hand"
+                    ToolTip="Permanently delete this order record">
+                <Button.Resources>
+                    <Style TargetType="Border">
+                        <Setter Property="CornerRadius" Value="6"/>
+                    </Style>
+                </Button.Resources>
+                <StackPanel Orientation="Horizontal">
+                    <md:PackIcon Kind="DeleteOutline" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBlock Text="Delete Order" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Click="OnCloseClick" Style="{StaticResource Pos3DSecondaryBtn}" Height="36" Padding="18,0">
+                    <TextBlock Text="Close" FontWeight="SemiBold"/>
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

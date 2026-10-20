@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page x:Class="AntiquePasabuyPOS.Views.Pages.ProductsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+      xmlns:views="clr-namespace:AntiquePasabuyPOS.Views"
+      Background="{DynamicResource PosBackground}"
+      SnapsToDevicePixels="True"
+      UseLayoutRounding="True">
+    <Grid Margin="18,14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Header -->
+            <RowDefinition Height="Auto"/> <!-- Filters &amp; Search -->
+            <RowDefinition Height="*"/>    <!-- DataGrid -->
+        </Grid.RowDefinitions>
+
+        <!-- ══ HEADER WITH TITLE &amp; ACTION ═════════════════════════════════════ -->
+        <Grid Grid.Row="0" Margin="0,0,0,12">
+            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                    <Border Background="{DynamicResource PosLightPurple}" CornerRadius="8" Padding="7" Margin="0,0,10,0" VerticalAlignment="Center">
+                        <md:PackIcon Kind="ShoppingOutline" Width="18" Height="18" Foreground="{DynamicResource PosPrimary}"/>
+                    </Border>
+                    <TextBlock Text="Products &amp; Catalog" FontSize="22" FontWeight="Bold"
+                               Foreground="{DynamicResource PosPrimaryText}" FontFamily="Segoe UI" VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBlock Text="Manage your product list, prices, and Pasabuy fee settings"
+                           Foreground="{DynamicResource PosSecondaryText}" FontSize="12" FontFamily="Segoe UI" Margin="40,2,0,0"/>
+            </StackPanel>
+
+            <!-- TOP ACTIONS -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <Button Style="{StaticResource Pos3DFilterBtn}"
+                        Click="OnScanBarcode" Height="38" Padding="14,0" Margin="0,0,8,0"
+                        ToolTip="Scan product barcode with webcam or scanner gun (Shortcut: F2)">
+                    <StackPanel Orientation="Horizontal">
+                        <md:PackIcon Kind="BarcodeScan" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{DynamicResource PosPrimary}"/>
+                        <TextBlock Text="SCAN &amp; ADD" FontWeight="Bold" FontSize="12" FontFamily="Segoe UI" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource Pos3DPrimaryBtn}"
+                        Click="OnAdd" Height="38" Padding="14,0">
+                    <StackPanel Orientation="Horizontal">
+                        <md:PackIcon Kind="Plus" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="+ ADD PRODUCT" FontWeight="Bold" FontSize="12" FontFamily="Segoe UI" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- ══ FILTERS &amp; SEARCH BAR ══════════════════════════════════════════ -->
+        <Border Grid.Row="1" Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}"
+                BorderThickness="1" CornerRadius="10" Margin="0,0,0,10" Padding="10,6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Status Filter Buttons -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,14,0">
+                    <Button x:Name="FilterAllBtn"      Content="All"             Click="OnFilterClick" Tag="all"      Style="{StaticResource Pos3DFilterBtn}" Margin="0,0,4,0"/>
+                    <Button x:Name="FilterActiveBtn"   Content="Active"          Click="OnFilterClick" Tag="active"   Style="{StaticResource Pos3DFilterBtn}" Margin="0,0,4,0"/>
+                    <Button x:Name="FilterInactiveBtn" Content="Inactive"        Click="OnFilterClick" Tag="inactive" Style="{StaticResource Pos3DFilterBtn}" Margin="0,0,4,0"/>
+                    <Button x:Name="FilterWithFeeBtn"  Content="With Pasabuy Fee" Click="OnFilterClick" Tag="withfee"  Style="{StaticResource Pos3DFilterBtn}" Margin="0,0,4,0"/>
+                    <Button x:Name="FilterNoFeeBtn"    Content="No Fee"          Click="OnFilterClick" Tag="nofee"    Style="{StaticResource Pos3DFilterBtn}"/>
+                </StackPanel>
+
+                <!-- Search box -->
+                <Border Grid.Column="1" Background="{DynamicResource PosBackground}" CornerRadius="8"
+                        BorderBrush="{DynamicResource PosBorder}" BorderThickness="1" Padding="10,5">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <md:PackIcon Kind="Magnify" Width="17" Height="17" Foreground="{DynamicResource PosMutedText}" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                        <TextBox x:Name="SearchBox" Grid.Column="1" BorderThickness="0" Background="Transparent"
+                                 FontSize="12.5" FontFamily="Segoe UI" VerticalAlignment="Center"
+                                 Foreground="{DynamicResource PosPrimaryText}"
+                                 CaretBrush="{DynamicResource PosPrimary}"
+                                 md:HintAssist.Hint="Search product name, category, store, price..."
+                                 md:TextFieldAssist.DecorationVisibility="Hidden"
+                                 TextChanged="OnSearch"/>
+                        <Button Grid.Column="2" Content="&#x2715;" Click="OnClearSearch"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Foreground="{DynamicResource PosMutedText}" Padding="6,2" FontSize="11"
+                                ToolTip="Clear search"/>
+                    </Grid>
+                </Border>
+
+                <!-- Selection / Bulk Toolbar -->
+                <StackPanel x:Name="BulkSelectionPanel" Grid.Column="2" Orientation="Horizontal" Margin="10,0,0,0" VerticalAlignment="Center" Visibility="Collapsed">
+                    <Border Background="{DynamicResource PosLightBlue}" CornerRadius="6"
+                            Padding="7,3" Margin="0,0,6,0" VerticalAlignment="Center">
+                        <TextBlock x:Name="SelectedCountLabel" Text="0 selected"
+                                   FontSize="11" FontWeight="Bold" Foreground="{DynamicResource PosPrimary}"/>
+                    </Border>
+                    <Button Click="OnClearSelectionClick" Style="{StaticResource Pos3DFilterBtn}" Height="30" Padding="8,0" Margin="0,0,4,0" ToolTip="Clear selection">
+                        <TextBlock Text="Clear" FontSize="11" FontWeight="SemiBold"/>
+                    </Button>
+                    <Button Click="OnBulkToggleActiveClick" Style="{StaticResource Pos3DFilterBtn}" Height="30" Padding="8,0" Margin="0,0,4,0" ToolTip="Toggle active/inactive status of selected products">
+                        <StackPanel Orientation="Horizontal">
+                            <md:PackIcon Kind="ToggleSwitchOutline" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,4,0" Foreground="{DynamicResource PosPrimary}"/>
+                            <TextBlock Text="Toggle Status" FontSize="11" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Click="OnBulkMoreClick" Style="{StaticResource Pos3DFilterBtn}" Height="30" Padding="8,0" ToolTip="More actions">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="More" FontSize="11" FontWeight="SemiBold"/>
+                            <md:PackIcon Kind="ChevronDown" Width="14" Height="14" VerticalAlignment="Center" Margin="3,0,0,0"/>
+                        </StackPanel>
+                        <Button.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Select All Visible" Click="OnSelectAllClick"/>
+                                <Separator/>
+                                <MenuItem Header="Delete Selected Products" Click="OnBulkDeleteClick" Foreground="#EF4444"/>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ══ PRODUCT DATAGRID ════════════════════════════════════════════════ -->
+        <Border Grid.Row="2" Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}"
+                BorderThickness="1" CornerRadius="10" Padding="2">
+            <DataGrid x:Name="MainGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                      CanUserAddRows="False" Style="{StaticResource MaterialDesignDataGrid}"
+                      HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                      MinRowHeight="50" AlternationCount="2" FontFamily="Segoe UI" FontSize="12.5"
+                      EnableRowVirtualization="True"
+                      VirtualizingPanel.IsVirtualizing="True"
+                      VirtualizingPanel.VirtualizationMode="Recycling"
+                      VirtualizingPanel.ScrollUnit="Pixel"
+                      ScrollViewer.CanContentScroll="True"
+                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                      Background="Transparent" BorderThickness="0">
+                <DataGrid.ColumnHeaderStyle>
+                    <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource MaterialDesignDataGridColumnHeader}">
+                        <Setter Property="FontSize" Value="10.5"/>
+                        <Setter Property="FontWeight" Value="Bold"/>
+                        <Setter Property="Foreground" Value="{DynamicResource PosSecondaryText}"/>
+                        <Setter Property="Padding" Value="8,8"/>
+                        <Setter Property="Background" Value="{DynamicResource PosBackground}"/>
+                    </Style>
+                </DataGrid.ColumnHeaderStyle>
+                <DataGrid.Columns>
+                    <!-- SELECTION CHECKBOX COLUMN -->
+                    <DataGridTemplateColumn Width="46" CanUserResize="False">
+                        <DataGridTemplateColumn.HeaderTemplate>
+                            <DataTemplate>
+                                <CheckBox x:Name="HeaderSelectAll" Click="OnHeaderSelectAllClick"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"
+                                          ToolTip="Select / Deselect all visible products"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.HeaderTemplate>
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"
+                                          Click="OnRowCheckBoxClick"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <!-- Image -->
+                    <DataGridTemplateColumn Header="Image" Width="58">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Border Width="36" Height="36" Background="{DynamicResource PosPanel}"
+                                        BorderBrush="{DynamicResource PosBorder}"
+                                        BorderThickness="1" CornerRadius="8" ClipToBounds="True" HorizontalAlignment="Center">
+                                    <Grid>
+                                        <md:PackIcon Kind="ShoppingOutline" Width="18" Height="18" Foreground="{DynamicResource PosPrimary}"
+                                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <Image Source="{Binding Thumbnail}" Stretch="Uniform"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <!-- Product Name -->
+                    <DataGridTemplateColumn Header="Product Name" Width="*" SortMemberPath="Name">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel VerticalAlignment="Center" Margin="4,0">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="12.5"
+                                               Foreground="{DynamicResource PosPrimaryText}" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <!-- Category -->
+                    <DataGridTextColumn Header="Category" Binding="{Binding Category, TargetNullValue='General'}" Width="115">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Setter Property="FontSize" Value="12"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <!-- Store -->
+                    <DataGridTemplateColumn Header="Store" Width="115" SortMemberPath="Store">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource PosPanel}" CornerRadius="6" Padding="8,2"
+                                        HorizontalAlignment="Left" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Store, TargetNullValue='General'}" FontSize="10.5" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource PosPrimary}"/>
+                                </Border>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <!-- Price -->
+                    <DataGridTextColumn Header="Price" Binding="{Binding Price, StringFormat='&#x20B1;{0:N2}'}" Width="95">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="FontSize" Value="13"/>
+                                <Setter Property="Foreground" Value="#059669"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <!-- Unit -->
+                    <DataGridTextColumn Header="Unit" Binding="{Binding Unit, TargetNullValue='pc'}" Width="65">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Setter Property="FontSize" Value="12"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <!-- Pasabuy Fee -->
+                    <DataGridTemplateColumn Header="Pasabuy Fee" Width="120">
+                        <DataGridTemplateColumn.HeaderStyle>
+                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource MaterialDesignDataGridColumnHeader}">
+                                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                            </Style>
+                        </DataGridTemplateColumn.HeaderStyle>
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Border CornerRadius="6" Padding="8,3" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                        Background="{Binding IsFeeExempt, Converter={StaticResource FeeExemptColorConv}, ConverterParameter=bg}">
+                                    <TextBlock Text="{Binding IsFeeExempt, Converter={StaticResource FeeExemptTextConv}}"
+                                               FontSize="10.5" FontWeight="Bold" HorizontalAlignment="Center"
+                                               Foreground="White"/>
+                                </Border>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <!-- Status -->
+                    <DataGridTemplateColumn Header="Status" Width="105">
+                        <DataGridTemplateColumn.HeaderStyle>
+                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource MaterialDesignDataGridColumnHeader}">
+                                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                            </Style>
+                        </DataGridTemplateColumn.HeaderStyle>
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Border CornerRadius="6" Padding="8,3" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Border.Background>
+                                        <Binding Path="IsActive" Converter="{StaticResource FeeExemptColorConv}" ConverterParameter="activebg"/>
+                                    </Border.Background>
+                                    <TextBlock Text="{Binding IsActive, Converter={StaticResource ActiveTextConv}}"
+                                               FontSize="10.5" FontWeight="Bold" HorizontalAlignment="Center"
+                                               Foreground="{Binding IsActive, Converter={StaticResource ActiveColorConv}}"/>
+                                </Border>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <!-- ROW ACTIONS -->
+                    <DataGridTemplateColumn Header="" Width="Auto" MinWidth="130">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0">
+                                    <Button Content="EDIT" Tag="{Binding Id}"
+                                            Style="{StaticResource Pos3DTableActionBtn}"
+                                            Margin="0,0,6,0" Click="OnEdit"/>
+                                    <Button Style="{StaticResource Pos3DTableMoreBtn}"
+                                            Click="OnMoreMenuClick" Tag="{Binding Id}"
+                                            ToolTip="More Actions">
+                                        <Button.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="Toggle Active / Inactive" Click="OnToggleActive">
+                                                    <MenuItem.Icon>
+                                                        <md:PackIcon Kind="ToggleSwitchOutline" Width="16" Height="16" Foreground="#059669"/>
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                                <Separator/>
+                                                <MenuItem Header="Delete Product" Click="OnDeleteFromMenu" Foreground="#EF4444">
+                                                    <MenuItem.Icon>
+                                                        <md:PackIcon Kind="DeleteOutline" Width="16" Height="16" Foreground="#EF4444"/>
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                            </ContextMenu>
+                                        </Button.ContextMenu>
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+    </Grid>
+</Page>

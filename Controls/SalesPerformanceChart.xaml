@@ -1,0 +1,130 @@
+<UserControl x:Class="AntiquePasabuyPOS.Controls.SalesPerformanceChart"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             SnapsToDevicePixels="True"
+             UseLayoutRounding="True">
+    <Border Background="{DynamicResource PosSurface}" CornerRadius="8" Padding="14,12"
+            BorderBrush="{DynamicResource PosBorder}" BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Header & Legend -->
+                <RowDefinition Height="*"/>    <!-- Chart Canvas Area -->
+            </Grid.RowDefinitions>
+
+            <!-- 1. CHART HEADER, VIEW MODE & INTERACTIVE LEGEND -->
+            <Grid Grid.Row="0" Margin="2,0,2,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Title & Subtitle -->
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <md:PackIcon Kind="ChartTimelineVariant" Width="15" Height="15" Foreground="{DynamicResource PosPrimary}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="Sales &amp; Revenue Analytics"
+                                   FontSize="13" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource PosPrimaryText}" FontFamily="Segoe UI"/>
+                    </StackPanel>
+                    <TextBlock x:Name="SubtitleLabel" Text="Revenue and fee breakdown for the selected period"
+                               FontSize="11" Foreground="{DynamicResource PosSecondaryText}" FontFamily="Segoe UI" Margin="0,2,0,0"/>
+                </StackPanel>
+
+                <!-- Right Controls: View Mode Switcher + Interactive Series Legend -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- View Mode Segmented Switcher -->
+                    <Border Background="{DynamicResource PosBackground}" CornerRadius="6" Padding="2"
+                            BorderBrush="{DynamicResource PosBorder}" BorderThickness="1" Margin="0,0,14,0" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <Border x:Name="ModeAllPill" Background="{DynamicResource PosPrimary}" CornerRadius="4" Padding="8,3"
+                                    Cursor="Hand" MouseLeftButtonDown="OnModeAllClicked" ToolTip="Show all metrics (Sales + Fees)">
+                                <TextBlock x:Name="ModeAllText" Text="All" FontSize="10.5" FontWeight="SemiBold" Foreground="White" FontFamily="Segoe UI"/>
+                            </Border>
+                            <Border x:Name="ModeFeesPill" Background="Transparent" CornerRadius="4" Padding="8,3"
+                                    Cursor="Hand" MouseLeftButtonDown="OnModeFeesClicked" ToolTip="Focus on Net Pasabuy &amp; Delivery earnings (auto-scaled)">
+                                <TextBlock x:Name="ModeFeesText" Text="Net Fees Only" FontSize="10.5" FontWeight="Medium" Foreground="{DynamicResource PosSecondaryText}" FontFamily="Segoe UI"/>
+                            </Border>
+                            <Border x:Name="ModeRevenuePill" Background="Transparent" CornerRadius="4" Padding="8,3"
+                                    Cursor="Hand" MouseLeftButtonDown="OnModeRevenueClicked" ToolTip="Focus only on gross sales volume">
+                                <TextBlock x:Name="ModeRevenueText" Text="Gross Sales" FontSize="10.5" FontWeight="Medium" Foreground="{DynamicResource PosSecondaryText}" FontFamily="Segoe UI"/>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Interactive Series Legend (Click series to toggle on/off) -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- Sales Revenue Legend -->
+                        <Border x:Name="LegendSalesItem" Cursor="Hand" Background="Transparent" CornerRadius="4" Padding="3,2" Margin="0,0,6,0"
+                                MouseLeftButtonDown="OnToggleSalesSeries" ToolTip="Click to toggle Sales Revenue">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Border x:Name="LegendSalesDot" Width="8" Height="8" CornerRadius="2" Background="#452B86" Margin="0,0,5,0"/>
+                                <TextBlock x:Name="LegendSalesLabel" Text="Sales Revenue" FontSize="11" FontWeight="Medium"
+                                           Foreground="{DynamicResource PosSecondaryText}" FontFamily="Segoe UI"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Pasabuy Fees Legend -->
+                        <Border x:Name="LegendPasabuyItem" Cursor="Hand" Background="Transparent" CornerRadius="4" Padding="3,2" Margin="0,0,6,0"
+                                MouseLeftButtonDown="OnTogglePasabuySeries" ToolTip="Click to toggle Pasabuy Fees">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Border x:Name="LegendPasabuyDot" Width="8" Height="8" CornerRadius="2" Background="#059669" Margin="0,0,5,0"/>
+                                <TextBlock x:Name="LegendPasabuyLabel" Text="Pasabuy Fees" FontSize="11" FontWeight="Medium"
+                                           Foreground="{DynamicResource PosSecondaryText}" FontFamily="Segoe UI"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Delivery Fees Legend -->
+                        <Border x:Name="LegendDeliveryItem" Cursor="Hand" Background="Transparent" CornerRadius="4" Padding="3,2"
+                                MouseLeftButtonDown="OnToggleDeliverySeries" ToolTip="Click to toggle Delivery Fees">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Border x:Name="LegendDeliveryDot" Width="8" Height="8" CornerRadius="2" Background="#D97706" Margin="0,0,5,0"/>
+                                <TextBlock x:Name="LegendDeliveryLabel" Text="Delivery Fees" FontSize="11" FontWeight="Medium"
+                                           Foreground="{DynamicResource PosSecondaryText}" FontFamily="Segoe UI"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+
+            <!-- 2. CHART PLOT CONTAINER -->
+            <Grid Grid.Row="1" MinHeight="165">
+                <!-- Grid for Y-Axis + Plot Canvas + X-Axis -->
+                <Grid x:Name="ChartMainGrid">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="65"/> <!-- Y-Axis labels -->
+                        <ColumnDefinition Width="*"/>  <!-- Plot area -->
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>    <!-- Plot and Y-axis labels -->
+                        <RowDefinition Height="24"/>   <!-- X-axis labels -->
+                    </Grid.RowDefinitions>
+
+                    <!-- Y-Axis Labels Canvas -->
+                    <Canvas x:Name="YAxisCanvas" Grid.Row="0" Grid.Column="0" ClipToBounds="True"/>
+
+                    <!-- Plot Area Canvas (Gridlines + Bars) -->
+                    <Canvas x:Name="PlotCanvas" Grid.Row="0" Grid.Column="1" ClipToBounds="True" Background="Transparent"
+                            SizeChanged="OnPlotCanvasSizeChanged"/>
+
+                    <!-- X-Axis Labels Canvas -->
+                    <Canvas x:Name="XAxisCanvas" Grid.Row="1" Grid.Column="1" ClipToBounds="True"/>
+                </Grid>
+
+                <!-- Empty State Display -->
+                <Border x:Name="EmptyStateOverlay" Background="{DynamicResource PosBackground}" CornerRadius="8"
+                        BorderBrush="{DynamicResource PosBorder}" BorderThickness="1" Visibility="Collapsed"
+                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="10,0,10,0">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <md:PackIcon Kind="ChartBar" Width="36" Height="36" Foreground="{DynamicResource PosMutedText}" HorizontalAlignment="Center"/>
+                        <TextBlock Text="No sales recorded for this period"
+                                   FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource PosSecondaryText}"
+                                   HorizontalAlignment="Center" Margin="0,6,0,2"/>
+                        <TextBlock Text="Orders placed will automatically chart here."
+                                   FontSize="11" Foreground="{DynamicResource PosMutedText}" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

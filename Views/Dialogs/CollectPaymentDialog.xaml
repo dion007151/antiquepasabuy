@@ -1,0 +1,220 @@
+<Window x:Class="AntiquePasabuyPOS.Views.Dialogs.CollectPaymentDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Record Payment" Width="500" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Background="{DynamicResource PosSurface}"
+        Style="{StaticResource MaterialDesignWindow}"
+        SnapsToDevicePixels="True" UseLayoutRounding="True">
+    <Grid Margin="24,20,24,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- 0: Header -->
+            <RowDefinition Height="Auto"/> <!-- 1: Balance Due Highlight Card -->
+            <RowDefinition Height="Auto"/> <!-- 2: Rush Quick Presets -->
+            <RowDefinition Height="Auto"/> <!-- 3: Amount & Method Inputs -->
+            <RowDefinition Height="Auto"/> <!-- 4: Live Change / Partial Feedback -->
+            <RowDefinition Height="Auto"/> <!-- 5: Date & Reference -->
+            <RowDefinition Height="Auto"/> <!-- 6: Payment Proof & Options -->
+            <RowDefinition Height="Auto"/> <!-- 7: Action Buttons -->
+        </Grid.RowDefinitions>
+
+        <!-- ══ 0. HEADER ═══════════════════════════════════════════════════════ -->
+        <Grid Grid.Row="0" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Background="#ECFDF5" CornerRadius="8" Padding="8" Margin="0,0,12,0" BorderBrush="#A7F3D0" BorderThickness="1">
+                    <md:PackIcon Kind="CashMultiple" Width="24" Height="24" Foreground="#059669" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock x:Name="DialogHeaderTitle" Text="Mark As Paid" FontSize="18" FontWeight="Bold"
+                               Foreground="{DynamicResource PosPrimaryText}" FontFamily="Segoe UI"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                        <TextBlock x:Name="OrderNoText" Text="PO:" FontSize="12" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource PosSecondary}"/>
+                        <TextBlock Text="  •  " FontSize="12" Foreground="{DynamicResource PosMutedText}"/>
+                        <TextBlock x:Name="CustomerText" Text="Customer: Walk-in" FontSize="12"
+                                   Foreground="{DynamicResource PosSecondaryText}"/>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+
+            <Border Grid.Column="1" Background="{DynamicResource PosPanel}" CornerRadius="6" Padding="8,4" VerticalAlignment="Center">
+                <TextBlock x:Name="OrderStatusBadge" Text="CONFIRMED" FontSize="11" FontWeight="Bold"
+                           Foreground="{DynamicResource PosSecondaryText}"/>
+            </Border>
+        </Grid>
+
+        <!-- ══ 1. BALANCE DUE HIGHLIGHT CARD ═══════════════════════════════════ -->
+        <Border Grid.Row="1" Background="#F0FDF4" BorderBrush="#86EFAC" BorderThickness="1.5"
+                CornerRadius="10" Padding="16,12" Margin="0,0,0,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock x:Name="BalanceDueTitleText" Text="BALANCE DUE" FontSize="11" FontWeight="Bold"
+                               Foreground="#15803D"/>
+                    <TextBlock x:Name="BalanceDueText" Text="₱0.00" FontSize="28" FontWeight="Bold"
+                               Foreground="#16A34A" FontFamily="Segoe UI" Margin="0,2,0,0"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBlock x:Name="GrandTotalText" Text="Total: ₱0.00" FontSize="12"
+                               Foreground="{DynamicResource PosSecondaryText}" HorizontalAlignment="Right"/>
+                    <TextBlock x:Name="TotalPaidText" Text="Paid: ₱0.00" FontSize="12"
+                               Foreground="{DynamicResource PosSecondaryText}" HorizontalAlignment="Right" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ══ 2. RUSH QUICK CASH PRESETS ═══════════════════════════════════════ -->
+        <StackPanel Grid.Row="2" Margin="0,0,0,14">
+            <TextBlock Text="Quick Presets:" FontSize="11" FontWeight="SemiBold"
+                       Foreground="{DynamicResource PosSecondaryText}" Margin="0,0,0,6"/>
+            <WrapPanel Orientation="Horizontal">
+                <Button x:Name="BtnExactDue" Content="Exact Due" Click="OnPresetClick" Tag="EXACT"
+                        Style="{StaticResource Pos3DSecondaryBtn}" Margin="0,0,6,6" MinHeight="32" Padding="10,4"
+                        FontWeight="SemiBold" FontSize="12"/>
+                <Button Content="₱100" Click="OnPresetClick" Tag="100"
+                        Style="{StaticResource Pos3DSecondaryBtn}" Margin="0,0,6,6" MinHeight="32" Padding="10,4"
+                        FontSize="12"/>
+                <Button Content="₱200" Click="OnPresetClick" Tag="200"
+                        Style="{StaticResource Pos3DSecondaryBtn}" Margin="0,0,6,6" MinHeight="32" Padding="10,4"
+                        FontSize="12"/>
+                <Button Content="₱500" Click="OnPresetClick" Tag="500"
+                        Style="{StaticResource Pos3DSecondaryBtn}" Margin="0,0,6,6" MinHeight="32" Padding="10,4"
+                        FontSize="12"/>
+                <Button Content="₱1,000" Click="OnPresetClick" Tag="1000"
+                        Style="{StaticResource Pos3DSecondaryBtn}" Margin="0,0,6,6" MinHeight="32" Padding="10,4"
+                        FontSize="12"/>
+            </WrapPanel>
+        </StackPanel>
+
+        <!-- ══ 3. PAYMENT AMOUNT & METHOD INPUTS ═══════════════════════════════ -->
+        <Grid Grid.Row="3" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Amount / Tendered -->
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="Payment Amount / Tendered (₱) *" FontSize="11.5" FontWeight="SemiBold"
+                           Foreground="{DynamicResource PosPrimaryText}" Margin="0,0,0,4"/>
+                <TextBox x:Name="AmountBox" Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                         FontSize="16" FontWeight="Bold" FontFamily="Segoe UI"
+                         Foreground="{DynamicResource PosPrimary}"
+                         TextChanged="OnAmountChanged"/>
+            </StackPanel>
+
+            <!-- Method Combo -->
+            <StackPanel Grid.Column="2">
+                <TextBlock Text="Payment Method *" FontSize="11.5" FontWeight="SemiBold"
+                           Foreground="{DynamicResource PosPrimaryText}" Margin="0,0,0,4"/>
+                <ComboBox x:Name="MethodCombo" Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                          FontSize="13" SelectionChanged="OnMethodSelectionChanged">
+                    <ComboBoxItem Content="Cash / On Hand" IsSelected="True"/>
+                    <ComboBoxItem Content="GCash"/>
+                    <ComboBoxItem Content="Bank Transfer"/>
+                    <ComboBoxItem Content="Maya"/>
+                    <ComboBoxItem Content="COD (Cash on Delivery)"/>
+                </ComboBox>
+            </StackPanel>
+        </Grid>
+
+        <!-- ══ 4. LIVE CHANGE / SETTLEMENT STATUS CARD ══════════════════════════ -->
+        <Border x:Name="SettlementCard" Grid.Row="4" CornerRadius="8" Padding="12,8" Margin="0,0,0,12"
+                Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <md:PackIcon x:Name="SettlementIcon" Kind="InformationOutline" Width="20" Height="20"
+                             Foreground="#0284C7" VerticalAlignment="Center" Margin="0,0,8,0"/>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock x:Name="SettlementStatusLabel" Text="Exact payment entered" FontSize="11" FontWeight="SemiBold"
+                               Foreground="{DynamicResource PosSecondaryText}"/>
+                    <TextBlock x:Name="SettlementDetailText" Text="Balance will be fully cleared." FontSize="13" FontWeight="Bold"
+                               Foreground="#16A34A" Margin="0,1,0,0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ══ 5. DATE & REFERENCE ═════════════════════════════════════════════ -->
+        <Grid Grid.Row="5" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="Payment Date" FontSize="11.5" FontWeight="SemiBold"
+                           Foreground="{DynamicResource PosPrimaryText}" Margin="0,0,0,4"/>
+                <DatePicker x:Name="PaymentDatePicker" FontSize="12"/>
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+                <TextBlock Text="Reference # (Optional)" FontSize="11.5" FontWeight="SemiBold"
+                           Foreground="{DynamicResource PosPrimaryText}" Margin="0,0,0,4"/>
+                <TextBox x:Name="ReferenceBox" Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                         md:HintAssist.Hint="e.g. GCash Ref #, Bank Ref"
+                         FontSize="12"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- ══ 6. PAYMENT PROOF & OPTIONS ══════════════════════════════════════ -->
+        <StackPanel Grid.Row="6" Margin="0,0,0,18">
+            <TextBlock Text="Payment Proof / Screenshot (Optional)" FontSize="11" FontWeight="SemiBold"
+                       Foreground="{DynamicResource PosSecondaryText}" Margin="0,0,0,4"/>
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Button x:Name="BrowseProofBtn" Content="Browse..." Click="OnBrowseProofClick"
+                        Style="{StaticResource Pos3DSecondaryBtn}" Height="32" Padding="10,0" FontSize="11.5"/>
+                <TextBlock x:Name="ProofFileLabel" Grid.Column="1" Text="No file selected" FontSize="11"
+                           Foreground="{DynamicResource PosSecondaryText}" VerticalAlignment="Center" Margin="8,0,0,0"
+                           TextTrimming="CharacterEllipsis"/>
+                <Button x:Name="ClearProofBtn" Grid.Column="2" Content="✕" Click="OnClearProofClick"
+                        Style="{StaticResource Pos3DSecondaryBtn}" Height="24" Width="24" Padding="0"
+                        FontSize="10" Visibility="Collapsed"/>
+            </Grid>
+            <CheckBox x:Name="PrintReceiptCheckBox" IsChecked="True"
+                      Content="Print / Preview Official Receipt after recording payment"
+                      FontSize="12" Foreground="{DynamicResource PosSecondaryText}"
+                      Cursor="Hand"/>
+        </StackPanel>
+
+        <!-- ══ 7. ACTION BUTTONS ═══════════════════════════════════════════════ -->
+        <Grid Grid.Row="7">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="0" Content="Cancel" Click="OnCancelClick"
+                    Style="{StaticResource Pos3DSecondaryBtn}" MinWidth="90"/>
+
+            <Button Grid.Column="2" Click="OnConfirmPaymentClick"
+                    Style="{StaticResource Pos3DSuccessBtn}" MinWidth="180" Height="42" Padding="20,0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <md:PackIcon Kind="CheckCircle" Width="20" Height="20" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="ConfirmBtnText" Text="MARK AS PAID" FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </Grid>
+    </Grid>
+</Window>

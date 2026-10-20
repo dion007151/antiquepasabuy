@@ -1,0 +1,29 @@
+<Window x:Class="AntiquePasabuyPOS.Views.Dialogs.UserDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="User" Width="440" Height="490"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Style="{StaticResource MaterialDesignWindow}">
+    <Grid Margin="28">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <TextBlock x:Name="TitleLbl" Text="Add User" FontSize="17" FontWeight="Bold" Foreground="#1E293B" FontFamily="Segoe UI" Margin="0,0,0,20"/>
+        <StackPanel Grid.Row="1">
+            <TextBlock Text="Full Name *" FontSize="11" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,4" FontFamily="Segoe UI"/>
+            <TextBox x:Name="FullNameBox" Style="{StaticResource MaterialDesignOutlinedTextBox}" md:HintAssist.Hint="Full name" FontSize="13" Margin="0,0,0,12"/>
+            <TextBlock Text="Username *" FontSize="11" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,4" FontFamily="Segoe UI"/>
+            <TextBox x:Name="UsernameBox" Style="{StaticResource MaterialDesignOutlinedTextBox}" md:HintAssist.Hint="username" FontSize="13" Margin="0,0,0,12"/>
+            <TextBlock x:Name="PwdLabel" Text="Password *" FontSize="11" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,4" FontFamily="Segoe UI"/>
+            <PasswordBox x:Name="PwdBox" Style="{StaticResource MaterialDesignOutlinedPasswordBox}" md:HintAssist.Hint="Password" FontSize="13" Margin="0,0,0,12"/>
+            <TextBlock Text="Role *" FontSize="11" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,4" FontFamily="Segoe UI"/>
+            <ComboBox x:Name="RoleCombo" Style="{StaticResource MaterialDesignOutlinedComboBox}" FontSize="13" Margin="0,0,0,12">
+                <ComboBoxItem Content="Admin"/><ComboBoxItem Content="Staff" IsSelected="True"/><ComboBoxItem Content="Shopper"/>
+            </ComboBox>
+            <TextBlock x:Name="ErrLbl" Foreground="#DC2626" FontSize="12" FontFamily="Segoe UI"/>
+        </StackPanel>
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="Cancel" Style="{StaticResource Pos3DSecondaryBtn}" Margin="0,0,10,0" Click="OnCancel"/>
+            <Button Content="Save User" Style="{StaticResource Pos3DPrimaryBtn}" Click="OnSave"/>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -1,0 +1,73 @@
+<Window x:Class="AntiquePasabuyPOS.Views.Dialogs.AssignDriverDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Assign Delivery Driver" Width="480" Height="460"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Style="{StaticResource MaterialDesignWindow}"
+        Background="#F8FAFC">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Margin="0,0,0,16" Padding="0,0,0,12" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="36" Height="36" Background="#EAF3FF" CornerRadius="8" Margin="0,0,10,0">
+                        <md:PackIcon Kind="Moped" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#2563EB"/>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Assign Delivery Driver" FontSize="17" FontWeight="Bold" Foreground="#102A43" FontFamily="Segoe UI"/>
+                        <TextBlock x:Name="SubtitleLabel" Text="Order details" FontSize="12" Foreground="#64748B" FontFamily="Segoe UI"/>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Form Body -->
+        <StackPanel Grid.Row="1">
+            <!-- Quick Preset Selector -->
+            <TextBlock Text="Quick Select Driver / Rider" FontSize="11" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,4" FontFamily="Segoe UI"/>
+            <ComboBox x:Name="DriverPresetCombo"
+                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                      FontSize="12.5" Margin="0,0,0,14"
+                      SelectionChanged="OnPresetSelectionChanged"/>
+
+            <!-- Driver Name Input -->
+            <TextBlock Text="Driver Full Name *" FontSize="11" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,4" FontFamily="Segoe UI"/>
+            <TextBox x:Name="DriverNameBox"
+                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                     md:HintAssist.Hint="e.g. John Doe (Rider)"
+                     FontSize="13" Margin="0,0,0,14"/>
+
+            <!-- Driver Contact -->
+            <TextBlock Text="Driver Contact Phone (Optional)" FontSize="11" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,4" FontFamily="Segoe UI"/>
+            <TextBox x:Name="DriverPhoneBox"
+                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                     md:HintAssist.Hint="09xxxxxxxxx"
+                     FontSize="13" Margin="0,0,0,14"/>
+
+            <!-- Optional Delivery Notes -->
+            <TextBlock Text="Delivery Notes / Instructions (Optional)" FontSize="11" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,4" FontFamily="Segoe UI"/>
+            <TextBox x:Name="NotesBox"
+                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                     md:HintAssist.Hint="e.g. Call before arrival, handle with care"
+                     FontSize="12" Margin="0,0,0,8"/>
+
+            <!-- Error Label -->
+            <TextBlock x:Name="ErrorLabel" Foreground="#DC2626" FontSize="11.5" FontFamily="Segoe UI" Margin="0,2,0,0" Visibility="Collapsed"/>
+        </StackPanel>
+
+        <!-- Footer Buttons -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="Cancel" Style="{StaticResource Pos3DSecondaryBtn}"
+                    Margin="0,0,10,0" Click="OnCancel"/>
+            <Button Content="Assign Driver" Style="{StaticResource Pos3DPrimaryBtn}"
+                    Click="OnSave"/>
+        </StackPanel>
+    </Grid>
+</Window>

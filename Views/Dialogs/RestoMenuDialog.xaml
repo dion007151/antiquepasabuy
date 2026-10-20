@@ -1,0 +1,105 @@
+<Window x:Class="AntiquePasabuyPOS.Views.Dialogs.RestoMenuDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Menu Item" Width="500" Height="640" WindowStartupLocation="CenterOwner" ResizeMode="NoResize" Style="{StaticResource MaterialDesignWindow}"
+        SnapsToDevicePixels="True" UseLayoutRounding="True">
+    <Grid Margin="24,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <TextBlock x:Name="TitleLbl" Text="Add New Dish" FontSize="17" FontWeight="Bold" Foreground="#102A43" FontFamily="Segoe UI" Margin="0,0,0,14"/>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- 1. DISH IMAGE -->
+                <TextBlock Text="Dish Photo" FontSize="11" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,6" FontFamily="Segoe UI"/>
+                <Border Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1.5" CornerRadius="8" Padding="10" Margin="0,0,0,12">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="84"/>
+                            <ColumnDefinition Width="14"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0" Width="84" Height="84" Background="White" BorderBrush="#D7E1EC" BorderThickness="1" CornerRadius="6" ClipToBounds="True">
+                            <Grid>
+                                <md:PackIcon x:Name="PlaceholderIcon" Kind="FoodDrumstick" Width="36" Height="36" Foreground="#94A3B8"
+                                             HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Visible"/>
+                                <Image x:Name="DishImgPreview" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
+                            </Grid>
+                        </Border>
+
+                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                            <TextBlock x:Name="ImageStatusLabel" Text="No image selected" FontSize="11" Foreground="#64748B" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="Choose Image" Click="OnChooseImage"
+                                        Style="{StaticResource Pos3DSecondaryBtn}"
+                                        Height="32" Padding="12,0" FontSize="11" Margin="0,0,6,0"/>
+                                <Button x:Name="RemoveImgBtn" Content="Remove" Click="OnRemoveImage"
+                                        Style="{StaticResource Pos3DTableDangerBtn}"
+                                        Height="32" Padding="10,0" FontSize="11" Visibility="Collapsed"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- 2. DISH CODE & NAME -->
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="120"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="Code" FontSize="11" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,4" FontFamily="Segoe UI"/>
+                        <TextBox x:Name="CodeBox" Style="{StaticResource MaterialDesignOutlinedTextBox}" md:HintAssist.Hint="GRL-001" FontSize="12.5" Padding="10,6"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Dish Name *" FontSize="11" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,4" FontFamily="Segoe UI"/>
+                        <TextBox x:Name="NameBox" Style="{StaticResource MaterialDesignOutlinedTextBox}" md:HintAssist.Hint="e.g. Sizzling Sisig, Pulutan Platter" FontSize="12.5" Padding="10,6"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- 3. CATEGORY -->
+                <TextBlock Text="Category" FontSize="11" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,4" FontFamily="Segoe UI"/>
+                <ComboBox x:Name="CategoryCombo" Style="{StaticResource MaterialDesignOutlinedComboBox}" md:HintAssist.Hint="Select category" FontSize="12.5" IsEditable="True" Padding="10,6" Margin="0,0,0,10"/>
+
+                <!-- 4. PRICES -->
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="Selling Price (₱) *" FontSize="11" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,4" FontFamily="Segoe UI"/>
+                        <TextBox x:Name="PriceBox" Style="{StaticResource MaterialDesignOutlinedTextBox}" md:HintAssist.Hint="0.00" FontSize="12.5" Padding="10,6"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Cost Price (₱)" FontSize="11" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,4" FontFamily="Segoe UI"/>
+                        <TextBox x:Name="CostPriceBox" Style="{StaticResource MaterialDesignOutlinedTextBox}" md:HintAssist.Hint="0.00" FontSize="12.5" Padding="10,6"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- 5. DESCRIPTION -->
+                <TextBlock Text="Description" FontSize="11" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,4" FontFamily="Segoe UI"/>
+                <TextBox x:Name="DescBox" Style="{StaticResource MaterialDesignOutlinedTextBox}" md:HintAssist.Hint="Brief description of the dish..." FontSize="12.5" Padding="10,6" Height="60" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Margin="0,0,0,10"/>
+
+                <!-- 6. AVAILABLE TOGGLE -->
+                <CheckBox x:Name="AvailableCheck" Content="  Available on menu" IsChecked="True" FontSize="12" Margin="0,0,0,6"/>
+
+                <TextBlock x:Name="ErrLbl" Foreground="#DC2626" FontSize="11.5" FontFamily="Segoe UI" Margin="0,4,0,0"/>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- ACTIONS -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button Content="Cancel" Style="{StaticResource Pos3DSecondaryBtn}" Margin="0,0,10,0" Click="OnCancel"/>
+            <Button Content="Save Dish" Style="{StaticResource Pos3DPrimaryBtn}" Click="OnSave"/>
+        </StackPanel>
+    </Grid>
+</Window>

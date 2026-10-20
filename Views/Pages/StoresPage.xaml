@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page x:Class="AntiquePasabuyPOS.Views.Pages.StoresPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+      Background="{DynamicResource PosBackground}">
+
+    <Grid Margin="18,14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- ══ HEADER ════════════════════════════════════════════════════════════ -->
+        <Grid Grid.Row="0" Margin="0,0,0,16">
+            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                    <Border Background="#FEF3C7" CornerRadius="8" Padding="7" Margin="0,0,10,0" VerticalAlignment="Center">
+                        <md:PackIcon Kind="StorefrontOutline" Width="18" Height="18" Foreground="#D97706"/>
+                    </Border>
+                    <TextBlock Text="Stores &amp; Partners" FontSize="22" FontWeight="Bold"
+                               Foreground="{DynamicResource PosPrimaryText}" FontFamily="Segoe UI" VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBlock Text="Manage shopping store locations and partner branches for Pasabuy runs"
+                           FontSize="12" Foreground="{DynamicResource PosSecondaryText}" FontFamily="Segoe UI" Margin="40,2,0,0"/>
+            </StackPanel>
+            <TextBlock x:Name="StatusMsg" HorizontalAlignment="Right" FontSize="12.5" FontWeight="SemiBold"
+                       FontFamily="Segoe UI" VerticalAlignment="Center" Foreground="#0F766E"/>
+        </Grid>
+
+        <!-- ══ BODY: ADD FORM + STORE LIST ══════════════════════════════════════ -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="340"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ── ADD STORE FORM ── -->
+            <Border Grid.Column="0" Background="{DynamicResource PosSurface}"
+                    BorderBrush="{DynamicResource PosBorder}" BorderThickness="1"
+                    CornerRadius="12" Padding="20" VerticalAlignment="Top">
+                <StackPanel>
+                    <!-- Form Header -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <Border Background="{DynamicResource PosLightPurple}" CornerRadius="7" Padding="6" Margin="0,0,10,0">
+                            <md:PackIcon Kind="StorePlusOutline" Width="16" Height="16" Foreground="{DynamicResource PosPrimary}"/>
+                        </Border>
+                        <TextBlock Text="Add Store Partner" FontSize="15" FontWeight="Bold"
+                                   Foreground="{DynamicResource PosPrimaryText}" FontFamily="Segoe UI" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="Enter the store brand name and optional branch location."
+                               FontSize="11.5" Foreground="{DynamicResource PosSecondaryText}"
+                               FontFamily="Segoe UI" TextWrapping="Wrap" Margin="0,0,0,18"/>
+
+                    <TextBlock Text="Store Name *" FontSize="11" FontWeight="Bold"
+                               Foreground="{DynamicResource PosSecondaryText}" FontFamily="Segoe UI"
+                               Margin="0,0,0,5"/>
+                    <TextBox x:Name="NewStoreNameBox"
+                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                             md:HintAssist.Hint="e.g. SM Supermarket, Robinsons"
+                             Foreground="{DynamicResource PosPrimaryText}"
+                             FontSize="13" Margin="0,0,0,14"/>
+
+                    <TextBlock Text="Branch / Location" FontSize="11" FontWeight="Bold"
+                               Foreground="{DynamicResource PosSecondaryText}" FontFamily="Segoe UI"
+                               Margin="0,0,0,5"/>
+                    <TextBox x:Name="NewStoreBranchBox"
+                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                             md:HintAssist.Hint="e.g. San Jose Antique, Iloilo City"
+                             Foreground="{DynamicResource PosPrimaryText}"
+                             FontSize="13" Margin="0,0,0,16"/>
+
+                    <TextBlock x:Name="ErrorLabel" FontSize="12" Foreground="#DC2626"
+                               FontFamily="Segoe UI" Margin="0,0,0,8" Visibility="Collapsed"/>
+
+                    <Button Click="OnAddStore"
+                            Style="{StaticResource Pos3DPrimaryBtn}"
+                            Height="44" HorizontalAlignment="Stretch">
+                        <StackPanel Orientation="Horizontal">
+                            <md:PackIcon Kind="Plus" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Add Store Partner" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Border>
+
+            <!-- ── STORE LIST ── -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Search -->
+                <Border Grid.Row="0" Background="{DynamicResource PosSurface}"
+                        BorderBrush="{DynamicResource PosBorder}" BorderThickness="1"
+                        CornerRadius="10" Padding="12,8" Margin="0,0,0,10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <md:PackIcon Kind="Magnify" Grid.Column="0" VerticalAlignment="Center"
+                                     Foreground="{DynamicResource PosMutedText}" Width="18" Height="18" Margin="0,0,8,0"/>
+                        <TextBox x:Name="SearchBox" Grid.Column="1"
+                                 BorderThickness="0" Background="Transparent"
+                                 FontSize="13" FontFamily="Segoe UI"
+                                 Foreground="{DynamicResource PosPrimaryText}"
+                                 md:HintAssist.Hint="Search stores / branches..."
+                                 md:TextFieldAssist.DecorationVisibility="Hidden"
+                                 TextChanged="OnSearchChanged"/>
+                        <Button Grid.Column="2" Content="&#x2715;"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Foreground="{DynamicResource PosMutedText}" Padding="6,2" FontSize="11"
+                                Click="OnClearSearch"/>
+                    </Grid>
+                </Border>
+
+                <!-- List -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <Border x:Name="EmptyPanel" Visibility="Collapsed"
+                                Padding="40" HorizontalAlignment="Center">
+                            <StackPanel HorizontalAlignment="Center">
+                                <md:PackIcon Kind="StorePlusOutline" Width="52" Height="52"
+                                             Foreground="{DynamicResource PosMutedText}"
+                                             HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                                <TextBlock Text="No stores found" FontSize="16" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource PosMutedText}"
+                                           HorizontalAlignment="Center" FontFamily="Segoe UI"/>
+                                <TextBlock Text="Add store partners using the card on the left."
+                                           FontSize="12" Foreground="{DynamicResource PosMutedText}"
+                                           HorizontalAlignment="Center" FontFamily="Segoe UI" Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <ItemsControl x:Name="StoresListControl">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource PosSurface}"
+                                            BorderBrush="{DynamicResource PosBorder}"
+                                            BorderThickness="1" CornerRadius="10"
+                                            Margin="0,0,0,8" Padding="14,10">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="{DynamicResource PosPanel}"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Store Avatar -->
+                                            <Border Grid.Column="0" Width="46" Height="46"
+                                                    CornerRadius="10" Margin="0,0,14,0">
+                                                <Border.Background>
+                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                        <GradientStop Color="#EDE9FE" Offset="0"/>
+                                                        <GradientStop Color="#DDD6FE" Offset="1"/>
+                                                    </LinearGradientBrush>
+                                                </Border.Background>
+                                                <md:PackIcon Kind="StorefrontOutline" Width="22" Height="22"
+                                                             Foreground="{DynamicResource PosPrimary}"
+                                                             HorizontalAlignment="Center"
+                                                             VerticalAlignment="Center"/>
+                                            </Border>
+
+                                            <!-- Store Name + Branch -->
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}" FontSize="14"
+                                                           FontWeight="Bold" FontFamily="Segoe UI"
+                                                           Foreground="{DynamicResource PosPrimaryText}"/>
+                                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                    <md:PackIcon Kind="MapMarkerOutline" Width="11" Height="11"
+                                                                 Foreground="{DynamicResource PosMutedText}"
+                                                                 VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                    <TextBlock Text="{Binding Branch}" FontSize="11.5"
+                                                               FontFamily="Segoe UI" VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource PosSecondaryText}"/>
+                                                </StackPanel>
+                                            </StackPanel>
+
+                                            <!-- Delete Button -->
+                                            <Button Grid.Column="2"
+                                                    Style="{StaticResource MaterialDesignIconButton}"
+                                                    Tag="{Binding}"
+                                                    Click="OnDeleteStore"
+                                                    ToolTip="Remove Store"
+                                                    Foreground="{DynamicResource PosDanger}">
+                                                <md:PackIcon Kind="TrashCanOutline" Width="18" Height="18"/>
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
+    </Grid>
+</Page>

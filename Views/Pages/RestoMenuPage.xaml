@@ -1,0 +1,97 @@
+<Page x:Class="AntiquePasabuyPOS.Views.Pages.RestoMenuPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+      Background="{DynamicResource PosBackground}"
+      SnapsToDevicePixels="True"
+      UseLayoutRounding="True">
+
+    <Page.Resources>
+        <Style TargetType="DataGridCell" BasedOn="{StaticResource MaterialDesignDataGridCell}">
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="8,0"/>
+        </Style>
+    </Page.Resources>
+
+    <Grid Margin="18,14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0" Margin="0,0,0,16">
+            <StackPanel>
+                <TextBlock Text="Menu &amp; Dish Catalog" FontSize="20" FontWeight="Bold"
+                           Foreground="{DynamicResource PosPrimaryText}"/>
+                <TextBlock Text="Manage Angelito's Bar &amp; Resto Grill food and drink offerings with photos."
+                           FontSize="12" Foreground="{DynamicResource PosSecondaryText}" Margin="0,2,0,0"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <TextBox x:Name="TxtSearchMenu" Width="220" Height="36" Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                         md:HintAssist.Hint="Search dishes by name or code..." TextChanged="OnSearchTextChanged" Margin="0,0,10,0"/>
+                <Button Click="OnAddDishClick" Style="{StaticResource Pos3DPrimaryBtn}" Height="36" Padding="14,0">
+                    <StackPanel Orientation="Horizontal">
+                        <md:PackIcon Kind="FoodForkDrink" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="+ ADD DISH" FontWeight="Bold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- Menu DataGrid -->
+        <Border Grid.Row="1" Background="{DynamicResource PosSurface}"
+                BorderBrush="{DynamicResource PosBorder}" BorderThickness="1"
+                CornerRadius="8" Padding="12">
+            <DataGrid x:Name="MenuGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                      HeadersVisibility="Column" Background="Transparent" BorderThickness="0"
+                      RowBackground="{DynamicResource PosSurface}"
+                      AlternatingRowBackground="{DynamicResource PosTableRow}"
+                      MouseDoubleClick="OnGridRowDoubleClick">
+                <DataGrid.Columns>
+                    <!-- Dish Photo Thumbnail -->
+                    <DataGridTemplateColumn Header="Photo" Width="60">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Border Width="36" Height="36" Background="{DynamicResource PosPanel}" BorderBrush="{DynamicResource PosBorder}"
+                                        BorderThickness="1" CornerRadius="6" ClipToBounds="True" HorizontalAlignment="Center">
+                                    <Grid>
+                                        <md:PackIcon Kind="FoodDrumstick" Width="18" Height="18" Foreground="{DynamicResource PosMutedText}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <Image Source="{Binding Thumbnail}" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <DataGridTextColumn Header="Code" Binding="{Binding Code}" Width="90"/>
+                    <DataGridTextColumn Header="Dish / Item Name" Binding="{Binding Name}" Width="*" FontWeight="SemiBold"/>
+                    <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="110"/>
+                    <DataGridTextColumn Header="Selling Price" Binding="{Binding Price, StringFormat='₱{0:N2}'}" Width="105" FontWeight="Bold"/>
+                    <DataGridTextColumn Header="Cost Price" Binding="{Binding CostPrice, StringFormat='₱{0:N2}'}" Width="95"/>
+                    <DataGridCheckBoxColumn Header="Available" Binding="{Binding IsAvailable}" Width="85"/>
+                    <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="1.5*"/>
+
+                    <!-- Action Buttons -->
+                    <DataGridTemplateColumn Header="Actions" Width="140">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <Button Click="OnEditDishRowClick" Tag="{Binding}" Style="{StaticResource Pos3DFilterBtn}"
+                                            Height="28" Padding="8,0" Margin="0,0,4,0" ToolTip="Edit Dish">
+                                        <md:PackIcon Kind="Pencil" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Click="OnDeleteDishRowClick" Tag="{Binding}" Style="{StaticResource Pos3DTableDangerBtn}"
+                                            Height="28" Padding="8,0" ToolTip="Delete Dish">
+                                        <md:PackIcon Kind="Delete" Width="13" Height="13"/>
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+    </Grid>
+</Page>

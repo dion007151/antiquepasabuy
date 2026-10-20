@@ -1,0 +1,206 @@
+<Window x:Class="AntiquePasabuyPOS.Views.Dialogs.PrintPreviewDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Print Preview &amp; Settings"
+        Width="920" Height="820"
+        MinWidth="720" MinHeight="600"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource PosBackground}"
+        ResizeMode="CanResizeWithGrip">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Title Header -->
+            <RowDefinition Height="Auto"/> <!-- Print Settings Toolbar -->
+            <RowDefinition Height="*"/>    <!-- Paper Preview -->
+            <RowDefinition Height="Auto"/> <!-- Bottom Actions -->
+        </Grid.RowDefinitions>
+
+        <!-- 1. Header Bar -->
+        <Border Grid.Row="0" Background="{DynamicResource PosSurface}" Padding="18,10" BorderBrush="{DynamicResource PosBorder}" BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <md:PackIcon Kind="Printer" Width="22" Height="22" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{DynamicResource PosPrimary}"/>
+                    <StackPanel>
+                        <TextBlock x:Name="TitleLabel" Text="Purchase Order Print Preview"
+                                   FontFamily="Segoe UI" FontWeight="Bold" FontSize="14"
+                                   Foreground="{DynamicResource PosPrimaryText}"/>
+                        <TextBlock x:Name="SubtitleLabel" Text="Pre-Print Settings: Configure printer options and paper layout before printing"
+                                   FontFamily="Segoe UI" FontSize="11"
+                                   Foreground="{DynamicResource PosSecondaryText}"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Queue Status / Clear stuck jobs banner -->
+                <StackPanel Grid.Column="1" x:Name="QueueWarningPanel" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
+                    <Border Background="#FEF2F2" BorderBrush="#FCA5A5" BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <md:PackIcon Kind="AlertCircleOutline" Width="14" Height="14" Foreground="#DC2626" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <TextBlock x:Name="QueueWarningText" Text="Stuck print jobs detected" FontSize="11" FontWeight="SemiBold" Foreground="#DC2626" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                    <Button Click="OnClearSpoolerQueue" Style="{StaticResource Pos3DTableDangerBtn}" Height="30" Padding="10,0" ToolTip="Purge stuck jobs from Windows print spooler">
+                        <TextBlock Text="Clear Stuck Jobs" FontSize="11" FontWeight="Bold"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 2. Print Settings Toolbar -->
+        <Border Grid.Row="1" Background="{DynamicResource PosPanel}" Padding="14,10" BorderBrush="{DynamicResource PosBorder}" BorderThickness="0,0,0,1"
+                ToolTip="Pre-print configuration settings (adjust paper, orientation, margins, and target printer before printing)">
+            <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <!-- Printer Selection -->
+                <StackPanel Margin="0,0,14,4">
+                    <TextBlock Text="PRINTER" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource PosSecondaryText}" FontFamily="Segoe UI" Margin="0,0,0,2"/>
+                    <ComboBox x:Name="PrinterCombo" Width="180" Height="30" FontSize="11.5"
+                              Background="{DynamicResource PosInput}" Foreground="{DynamicResource PosInputText}" BorderBrush="{DynamicResource PosBorder}"
+                              SelectionChanged="OnSettingChanged"/>
+                </StackPanel>
+
+                <!-- Paper Size -->
+                <StackPanel Margin="0,0,14,4">
+                    <TextBlock Text="PAPER SIZE" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource PosSecondaryText}" FontFamily="Segoe UI" Margin="0,0,0,2"/>
+                    <ComboBox x:Name="PaperSizeCombo" Width="135" Height="30" FontSize="11.5"
+                              Background="{DynamicResource PosInput}" Foreground="{DynamicResource PosInputText}" BorderBrush="{DynamicResource PosBorder}"
+                              SelectionChanged="OnSettingChanged">
+                        <ComboBoxItem Content="A4" Tag="A4" IsSelected="True"/>
+                        <ComboBoxItem Content="Letter" Tag="Letter"/>
+                        <ComboBoxItem Content="Legal" Tag="Legal"/>
+                        <ComboBoxItem Content="A5" Tag="A5"/>
+                        <ComboBoxItem Content="Thermal 58mm" Tag="Thermal58"/>
+                        <ComboBoxItem Content="Thermal 80mm" Tag="Thermal80"/>
+                        <ComboBoxItem Content="Custom Size" Tag="Custom"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- Orientation -->
+                <StackPanel Margin="0,0,14,4">
+                    <TextBlock Text="ORIENTATION" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource PosSecondaryText}" FontFamily="Segoe UI" Margin="0,0,0,2"/>
+                    <ComboBox x:Name="OrientationCombo" Width="105" Height="30" FontSize="11.5"
+                              Background="{DynamicResource PosInput}" Foreground="{DynamicResource PosInputText}" BorderBrush="{DynamicResource PosBorder}"
+                              SelectionChanged="OnSettingChanged">
+                        <ComboBoxItem Content="Auto" Tag="Auto" IsSelected="True"/>
+                        <ComboBoxItem Content="Portrait" Tag="Portrait"/>
+                        <ComboBoxItem Content="Landscape" Tag="Landscape"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- Margins -->
+                <StackPanel Margin="0,0,14,4">
+                    <TextBlock Text="MARGINS" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource PosSecondaryText}" FontFamily="Segoe UI" Margin="0,0,0,2"/>
+                    <ComboBox x:Name="MarginsCombo" Width="100" Height="30" FontSize="11.5"
+                              Background="{DynamicResource PosInput}" Foreground="{DynamicResource PosInputText}" BorderBrush="{DynamicResource PosBorder}"
+                              SelectionChanged="OnSettingChanged">
+                        <ComboBoxItem Content="Normal (36pt)" Tag="Normal" IsSelected="True"/>
+                        <ComboBoxItem Content="Narrow (18pt)" Tag="Narrow"/>
+                        <ComboBoxItem Content="Compact (8pt)" Tag="Compact"/>
+                        <ComboBoxItem Content="None (0pt)" Tag="None"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- Copies -->
+                <StackPanel Margin="0,0,14,4">
+                    <TextBlock Text="COPIES" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource PosSecondaryText}" FontFamily="Segoe UI" Margin="0,0,0,2"/>
+                    <TextBox x:Name="CopiesBox" Text="1" Width="55" Height="30" FontSize="12"
+                             Background="{DynamicResource PosInput}" Foreground="{DynamicResource PosInputText}" BorderBrush="{DynamicResource PosBorder}"
+                             TextAlignment="Center" VerticalContentAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Custom Size Inputs (Collapsed by default) -->
+                <StackPanel x:Name="CustomSizePanel" Orientation="Horizontal" Margin="0,0,14,4" Visibility="Collapsed">
+                    <StackPanel Margin="0,0,6,0">
+                        <TextBlock Text="WIDTH (PT)" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource PosSecondaryText}" Margin="0,0,0,2"/>
+                        <TextBox x:Name="CustomWidthBox" Text="600" Width="65" Height="30" FontSize="11"
+                                 Background="{DynamicResource PosInput}" Foreground="{DynamicResource PosInputText}" BorderBrush="{DynamicResource PosBorder}"
+                                 TextChanged="OnSettingChanged"/>
+                    </StackPanel>
+                    <StackPanel>
+                        <TextBlock Text="HEIGHT (PT)" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource PosSecondaryText}" Margin="0,0,0,2"/>
+                        <TextBox x:Name="CustomHeightBox" Text="800" Width="65" Height="30" FontSize="11"
+                                 Background="{DynamicResource PosInput}" Foreground="{DynamicResource PosInputText}" BorderBrush="{DynamicResource PosBorder}"
+                                 TextChanged="OnSettingChanged"/>
+                    </StackPanel>
+                </StackPanel>
+            </WrapPanel>
+        </Border>
+
+        <!-- 3. Document Preview Area -->
+        <ScrollViewer Grid.Row="2" Background="{DynamicResource PosBackground}"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Auto"
+                      Padding="24">
+            <Border x:Name="PaperContainer"
+                    Background="White"
+                    CornerRadius="4"
+                    Padding="0"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    Effect="{DynamicResource MaterialDesignShadowDepth3}">
+                <FlowDocumentScrollViewer x:Name="DocViewer"
+                                          IsToolBarVisible="False"
+                                          VerticalScrollBarVisibility="Disabled"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          Background="White"
+                                          Padding="0"/>
+            </Border>
+        </ScrollViewer>
+
+        <!-- 4. Action Bar -->
+        <Border Grid.Row="3" Background="{DynamicResource PosSurface}" Padding="18,12" BorderBrush="{DynamicResource PosBorder}" BorderThickness="0,1,0,0">
+            <Grid>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                    <TextBlock x:Name="PaperInfoLabel"
+                               Text="A4 Portrait • Standard Document"
+                               FontFamily="Segoe UI" FontSize="11.5" Foreground="{DynamicResource PosSecondaryText}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <!-- Save PDF Button -->
+                    <Button Click="OnSavePdf"
+                            Style="{StaticResource Pos3DSecondaryBtn}"
+                            Height="38" Padding="14,0" Margin="0,0,10,0"
+                            ToolTip="Save document as PDF file">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <md:PackIcon Kind="FilePdfBox" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="#F43F5E"/>
+                            <TextBlock Text="Save PDF" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Copy Receipt as Image Button -->
+                    <Button x:Name="CopyImageBtn" Click="OnCopyAsImage"
+                            Style="{StaticResource Pos3DSecondaryBtn}"
+                            Height="38" Padding="14,0" Margin="0,0,10,0"
+                            ToolTip="Copy receipt as image to clipboard — paste directly into Messenger, Viber, etc.">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <md:PackIcon Kind="ContentCopy" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="#7C3AED"/>
+                            <TextBlock Text="Copy as Image" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Print Button -->
+                    <Button x:Name="PrintBtn" Click="OnPrint"
+                            Style="{StaticResource Pos3DPrimaryBtn}"
+                            Height="38" Padding="20,0" Margin="0,0,10,0"
+                            ToolTip="Print to selected printer">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <md:PackIcon Kind="Printer" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Print" VerticalAlignment="Center" FontWeight="Bold"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Close Button -->
+                    <Button Content="Close" Click="OnClose"
+                            Style="{StaticResource Pos3DSecondaryBtn}"
+                            Height="38" Padding="16,0"
+                            FontWeight="SemiBold"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

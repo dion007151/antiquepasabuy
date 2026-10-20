@@ -1,0 +1,65 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>AntiquePasabuyPOS</RootNamespace>
+    <AssemblyName>AntiquePasabuyPOS</AssemblyName>
+    <StartupObject>AntiquePasabuyPOS.App</StartupObject>
+    <ApplicationIcon>Assets\dionix_icon.ico</ApplicationIcon>
+    <NodeReuse>false</NodeReuse>
+    <UseSharedCompilation>false</UseSharedCompilation>
+    <!-- Performance: enable tiered PGO for faster steady-state execution on low-end CPUs -->
+    <TieredPGO>true</TieredPGO>
+    <!-- Optimize memory layout for single-core/low-memory Celeron class hardware -->
+    <GarbageCollectionAdaptationMode>0</GarbageCollectionAdaptationMode>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="AForge.Video.DirectShow" Version="2.2.5" />
+    <PackageReference Include="FlashCap" Version="1.12.0" />
+    <PackageReference Include="LottieSharp" Version="2.4.3" />
+    <PackageReference Include="MaterialDesignThemes" Version="5.1.0" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.8" />
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <PackageReference Include="ClosedXML" Version="0.102.3" />
+    <PackageReference Include="ZXing.Net.Bindings.Windows.Compatibility" Version="0.16.16" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Payment method icons — embedded as WPF resources, accessible via /Assets/PaymentIcons/xxx.png -->
+    <Resource Include="Assets\PaymentIcons\gcash.png" />
+    <Resource Include="Assets\PaymentIcons\bank.png" />
+    <Resource Include="Assets\PaymentIcons\cash.png" />
+    <!-- Business logos — embedded resources -->
+    <Resource Include="pasabuy logo.png" />
+    <Resource Include="pasabuy logo.jpg" />
+    <Resource Include="pasabuy logo 2.png" />
+    <Resource Include="Assets\dionix_icon.ico" />
+    <Resource Include="Assets\dionix_icon.png" />
+    <Resource Include="antique pasabuy windows icon.png" />
+    <Resource Include="dionix pos logo windows app.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="live bg.mp4">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Business team.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Restaurant.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="tests\**" />
+    <EmbeddedResource Remove="tests\**" />
+    <None Remove="tests\**" />
+    <Page Remove="tests\**" />
+  </ItemGroup>
+</Project>
+
+
+

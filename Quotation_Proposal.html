@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Official Proposal & System Quotation - DIONIX POS</title>
+<style>
+  @page {
+    size: A4;
+    margin: 14mm 14mm 14mm 14mm;
+  }
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    color: #1e293b;
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+    font-size: 11.5px;
+    line-height: 1.45;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 3px solid #6366f1;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+  }
+  .brand-title {
+    font-size: 24px;
+    font-weight: 800;
+    color: #312e81;
+    letter-spacing: -0.5px;
+    margin: 0;
+  }
+  .brand-sub {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 3px;
+    font-weight: 600;
+  }
+  .badge-doc {
+    background: #e0e7ff;
+    color: #3730a3;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    display: inline-block;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .meta-box {
+    text-align: right;
+  }
+  .meta-line {
+    font-size: 10.5px;
+    color: #475569;
+  }
+
+  .client-card {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+  }
+  .client-card h4 {
+    margin: 0 0 4px 0;
+    font-size: 10px;
+    text-transform: uppercase;
+    color: #64748b;
+    letter-spacing: 0.6px;
+  }
+  .client-card p {
+    margin: 0;
+    font-weight: 600;
+    color: #0f172a;
+    font-size: 12px;
+  }
+  .client-card .subtext {
+    font-size: 10px;
+    color: #64748b;
+    font-weight: normal;
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e1b4b;
+    border-left: 4px solid #6366f1;
+    padding-left: 8px;
+    margin: 12px 0 8px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 12px;
+  }
+  th {
+    background: #1e1b4b;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 6px 8px;
+    text-align: left;
+  }
+  td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 10.5px;
+  }
+  tr:nth-child(even) td {
+    background: #f8fafc;
+  }
+  .col-num { width: 5%; text-align: center; }
+  .col-module { width: 32%; font-weight: 600; color: #0f172a; }
+  .col-desc { width: 48%; color: #475569; }
+  .col-val { width: 15%; text-align: right; font-weight: 600; color: #334155; }
+
+  .pricing-summary {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 12px;
+    margin-top: 10px;
+    margin-bottom: 14px;
+  }
+
+  .discount-callout {
+    background: #f0fdf4;
+    border: 1px dashed #22c55e;
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .discount-callout h4 {
+    margin: 0 0 4px 0;
+    color: #15803d;
+    font-size: 11.5px;
+  }
+  .discount-callout p {
+    margin: 0;
+    font-size: 10px;
+    color: #166534;
+    line-height: 1.35;
+  }
+
+  .totals-box {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .price-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    font-size: 11px;
+    color: #475569;
+  }
+  .price-row.original {
+    text-decoration: line-through;
+    color: #94a3b8;
+  }
+  .price-row.discount {
+    color: #16a34a;
+    font-weight: 600;
+  }
+  .price-row.grand-total {
+    border-top: 2px solid #6366f1;
+    margin-top: 6px;
+    padding-top: 6px;
+    font-size: 16px;
+    font-weight: 800;
+    color: #4338ca;
+  }
+
+  .inclusions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .inc-item {
+    background: #fdf4ff;
+    border: 1px solid #f0abfc;
+    border-radius: 6px;
+    padding: 7px 9px;
+    font-size: 10px;
+  }
+  .inc-item strong {
+    display: block;
+    color: #701a75;
+    font-size: 10.5px;
+    margin-bottom: 2px;
+  }
+
+  .signatures {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px dashed #cbd5e1;
+  }
+  .sig-line {
+    border-top: 1px solid #0f172a;
+    margin-top: 36px;
+    padding-top: 4px;
+    text-align: center;
+    font-size: 10.5px;
+    font-weight: 600;
+  }
+  .sig-title {
+    text-align: center;
+    font-size: 9.5px;
+    color: #64748b;
+  }
+
+  .footer-note {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 9px;
+    color: #94a3b8;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="badge-doc">Official System Quotation & Valuation</div>
+    <h1 class="brand-title">DIONIX POS / Antique Pasabuy System</h1>
+    <div class="brand-sub">Complete Multi-Module Point of Sale & Order Fulfillment Solution</div>
+  </div>
+  <div class="meta-box">
+    <div class="meta-line"><strong>Quotation Ref:</strong> DPOS-2026-001</div>
+    <div class="meta-line"><strong>Date:</strong> October 12, 2026</div>
+    <div class="meta-line"><strong>Validity:</strong> 30 Days</div>
+    <div class="meta-line"><strong>Platform:</strong> Windows Desktop (.NET 8 WPF)</div>
+  </div>
+</div>
+
+<div class="client-card">
+  <div>
+    <h4>Prepared For (Client)</h4>
+    <p>Valued Client</p>
+    <div class="subtext">Retail / Pasabuy / Food & Beverage Business</div>
+    <div class="subtext">Antique, Philippines</div>
+  </div>
+  <div>
+    <h4>Prepared By (Software Developer)</h4>
+    <p>Dioni / DIONIX Software Solutions</p>
+    <div class="subtext">Custom Desktop Application Developer</div>
+    <div class="subtext">Specialized POS & Inventory Management Systems</div>
+  </div>
+</div>
+
+<div class="section-title">System Module Valuation Breakdown</div>
+<table>
+  <thead>
+    <tr>
+      <th class="col-num">#</th>
+      <th class="col-module">Module / Feature</th>
+      <th class="col-desc">Scope & Capabilities Included</th>
+      <th class="col-val">Market Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="col-num">1</td>
+      <td class="col-module">Dual-Mode Architecture</td>
+      <td class="col-desc">Pasabuy / Multi-Customer Order fulfillment + Complete Restaurant / Dine-in POS in a single unified system</td>
+      <td class="col-val">₱ 22,000</td>
+    </tr>
+    <tr>
+      <td class="col-num">2</td>
+      <td class="col-module">Smart Shopping & Fulfillment</td>
+      <td class="col-desc">Consolidated shopping list by store/category, live barcode/camera scanner integration, out-of-stock replanning</td>
+      <td class="col-val">₱ 16,000</td>
+    </tr>
+    <tr>
+      <td class="col-num">3</td>
+      <td class="col-module">Inventory & Product Catalog</td>
+      <td class="col-desc">Product image storage, barcode management, multi-store pricing, stock ledger, real-time quantity tracking</td>
+      <td class="col-val">₱ 14,000</td>
+    </tr>
+    <tr>
+      <td class="col-num">4</td>
+      <td class="col-module">Customer & Store Registry</td>
+      <td class="col-desc">Customer profiles, order histories, balance due ledger, store partner directory, delivery addresses</td>
+      <td class="col-val">₱ 9,000</td>
+    </tr>
+    <tr>
+      <td class="col-num">5</td>
+      <td class="col-module">Multi-Channel Payments & POS</td>
+      <td class="col-desc">Cash, GCash, Maya, Bank Transfer, COD; split payment tracking, downpayment handling, auto-calculated balance</td>
+      <td class="col-val">₱ 12,000</td>
+    </tr>
+    <tr>
+      <td class="col-num">6</td>
+      <td class="col-module">Restaurant & Table Management</td>
+      <td class="col-desc">Floor plan/tables, order ticketing, kitchen display sync, menu management, service fees, discounts</td>
+      <td class="col-val">₱ 18,000</td>
+    </tr>
+    <tr>
+      <td class="col-num">7</td>
+      <td class="col-module">Reporting, Expenses & Thermal Print</td>
+      <td class="col-desc">Daily/monthly revenue analytics, expense tracking, net profit, thermal receipt generator & packing checklists</td>
+      <td class="col-val">₱ 11,000</td>
+    </tr>
+    <tr>
+      <td class="col-num">8</td>
+      <td class="col-module">Enterprise Engine & Security</td>
+      <td class="col-desc">Role-based access (Admin, Staff, Shopper), SQLite WAL high-performance database, zero monthly cloud fees</td>
+      <td class="col-val">₱ 8,000</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="pricing-summary">
+  <div class="discount-callout">
+    <h4>Special Goodwill Discount Applied</h4>
+    <p>
+      <strong>Reason for Concession:</strong> Client budget consideration and long-term business partnership support.<br>
+      A massive <strong>72.7% (₱80,000)</strong> developer sponsorship discount is granted. The client receives the complete, unrestricted lifetime system license with all modules above.
+    </p>
+  </div>
+
+  <div class="totals-box">
+    <div class="price-row">
+      <span>Total System Market Value:</span>
+      <span class="original">₱ 110,000.00</span>
+    </div>
+    <div class="price-row discount">
+      <span>Goodwill / Budget Discount:</span>
+      <span>- ₱ 80,000.00 (72.7%)</span>
+    </div>
+    <div class="price-row grand-total">
+      <span>Special Package Price:</span>
+      <span>₱ 30,000.00</span>
+    </div>
+  </div>
+</div>
+
+<div class="section-title">What is Included in the ₱30,000 Package</div>
+<div class="inclusions">
+  <div class="inc-item">
+    <strong>Lifetime Perpetual Software License</strong>
+    Full access to both Pasabuy and Restaurant POS modules. Zero monthly subscription or recurring cloud fees.
+  </div>
+  <div class="inc-item">
+    <strong>On-Site / Remote Installation & Setup</strong>
+    Complete setup on client's Windows PC/laptop, database initialization, and hardware connection (scanner, printer).
+  </div>
+  <div class="inc-item">
+    <strong>Staff & Admin Hands-On Training</strong>
+    Comprehensive walkthrough on taking orders, shopping workflow, payments, reports, and day-end balancing.
+  </div>
+  <div class="inc-item">
+    <strong>3 Months Free Technical Support & Bug Fixes</strong>
+    Direct developer assistance for operational questions, system fine-tuning, and routine data backup assistance.
+  </div>
+</div>
+
+<div class="signatures">
+  <div>
+    <div class="sig-title">Prepared and Offered by:</div>
+    <div class="sig-line">Dioni / Lead Developer</div>
+    <div class="sig-title">DIONIX Software Solutions</div>
+  </div>
+  <div>
+    <div class="sig-title">Accepted and Approved by:</div>
+    <div class="sig-line">Authorized Representative / Client Signature</div>
+    <div class="sig-title">Date Signed</div>
+  </div>
+</div>
+
+<div class="footer-note">
+  * This quotation reflects custom desktop software engineering rates in the Philippines. Payment terms: 50% downpayment upon deployment, 50% upon sign-off.
+</div>
+
+</body>
+</html>

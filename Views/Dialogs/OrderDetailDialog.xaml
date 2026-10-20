@@ -1,0 +1,554 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window x:Class="AntiquePasabuyPOS.Views.Dialogs.OrderDetailDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Purchase Order Details" Width="1100" Height="700" MinWidth="980" MinHeight="620"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResizeWithGrip"
+        Style="{StaticResource MaterialDesignWindow}"
+        Background="{DynamicResource PosBackground}"
+        SnapsToDevicePixels="True" UseLayoutRounding="True">
+
+    <Window.Resources>
+        <Style x:Key="SectionLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="Foreground" Value="{DynamicResource PosSecondaryText}"/>
+            <Setter Property="Margin" Value="0,0,0,2"/>
+        </Style>
+        <Style x:Key="FinanceLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="Foreground" Value="{DynamicResource PosSecondaryText}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="FinanceValue" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="Foreground" Value="{DynamicResource PosPrimaryText}"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ══ 0. GRADIENT HEADER ════════════════════════════════════════════════ -->
+        <Border Grid.Row="0">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="#4A1F9B" Offset="0"/>
+                    <GradientStop Color="#6D28D9" Offset="0.5"/>
+                    <GradientStop Color="#5B21B6" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
+            <Grid Margin="22,16,22,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,4">
+                        <md:PackIcon Kind="ClipboardListOutline" Width="22" Height="22" Foreground="White"
+                                     VerticalAlignment="Center" Margin="0,0,10,0" Opacity="0.9"/>
+                        <TextBlock x:Name="OrderNoLabel" Text="ORD-0000-0000"
+                                   FontSize="22" FontWeight="Bold" Foreground="White"
+                                   FontFamily="Segoe UI" VerticalAlignment="Center" Margin="0,0,14,0"/>
+                        <Border x:Name="StatusBadge" CornerRadius="20" Padding="12,5" VerticalAlignment="Center"
+                                Background="#FFFFFF22">
+                            <StackPanel Orientation="Horizontal">
+                                <md:PackIcon x:Name="StatusIcon" Kind="ClockOutline" Width="13" Height="13"
+                                             Foreground="White" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                <TextBlock x:Name="StatusLabel" Text="WAITING TO BUY"
+                                           Foreground="White" FontSize="11" FontWeight="Bold" FontFamily="Segoe UI"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                    <TextBlock x:Name="DateLabel" Text="Created: Jan 01, 2026"
+                               FontSize="11.5" Foreground="#FFFFFFBB" FontFamily="Segoe UI" Margin="32,0,0,0"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Click="OnReceiptPreview" Height="34" Padding="12,0" Margin="0,0,8,0"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Foreground="White" BorderBrush="#FFFFFF66">
+                        <StackPanel Orientation="Horizontal">
+                            <md:PackIcon Kind="ReceiptText" Width="15" Height="15" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Receipt" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Click="OnQuickPrint" Height="34" Width="34" Padding="0"
+                            ToolTip="Quick Print to Default Printer"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Foreground="White" BorderBrush="#FFFFFF66">
+                        <md:PackIcon Kind="Printer" Width="16" Height="16"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ══ 1. MAIN CONTENT BODY ════════════════════════════════════════════ -->
+        <Grid Grid.Row="1" Margin="20,14,20,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.6*"/>
+                <ColumnDefinition Width="14"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ── LEFT COLUMN ── -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Customer & Delivery Card -->
+                <Border Grid.Row="0" Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}"
+                        BorderThickness="1" CornerRadius="10" Margin="0,0,0,10">
+                    <Grid Margin="16,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="1"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <Border Background="{DynamicResource PosPanel}" CornerRadius="6" Padding="5" Margin="0,0,8,0">
+                                    <md:PackIcon Kind="AccountOutline" Width="13" Height="13" Foreground="{DynamicResource PosPrimary}"/>
+                                </Border>
+                                <TextBlock Text="CUSTOMER" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock x:Name="CustNameLabel" Text="Walk-in Customer"
+                                       FontSize="13.5" FontWeight="Bold" Foreground="{DynamicResource PosPrimaryText}"
+                                       FontFamily="Segoe UI" Margin="0,0,0,2"/>
+                            <StackPanel Orientation="Horizontal">
+                                <md:PackIcon Kind="Phone" Width="11" Height="11" Foreground="{DynamicResource PosMutedText}"
+                                             VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                <TextBlock x:Name="CustPhoneLabel" Text="No phone on record"
+                                           FontSize="11" Foreground="{DynamicResource PosSecondaryText}" FontFamily="Segoe UI"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <Rectangle Grid.Column="1" Width="1" Fill="{DynamicResource PosBorder}" Margin="0,4"/>
+                        <StackPanel Grid.Column="2" Margin="14,0,0,0">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <Border Background="{DynamicResource PosPanel}" CornerRadius="6" Padding="5" Margin="0,0,8,0">
+                                    <md:PackIcon Kind="TruckDeliveryOutline" Width="13" Height="13" Foreground="{DynamicResource PosPrimary}"/>
+                                </Border>
+                                <TextBlock Text="DELIVERY / HANDOVER" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock x:Name="DeliveryTypeLabel" Text="PICKUP"
+                                       FontSize="13.5" FontWeight="Bold" Foreground="{DynamicResource PosPrimaryText}"
+                                       FontFamily="Segoe UI" Margin="0,0,0,2"/>
+                            <StackPanel Orientation="Horizontal">
+                                <md:PackIcon Kind="MapMarkerOutline" Width="11" Height="11" Foreground="{DynamicResource PosMutedText}"
+                                             VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                <TextBlock x:Name="AddressLabel" Text="Address: (None specified)"
+                                           FontSize="11" Foreground="{DynamicResource PosSecondaryText}"
+                                           FontFamily="Segoe UI" TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Items DataGrid Card -->
+                <Border Grid.Row="1" Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}"
+                        BorderThickness="1" CornerRadius="10">
+                    <Grid Margin="14,12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                            <md:PackIcon Kind="FormatListBulleted" Width="14" Height="14"
+                                         Foreground="{DynamicResource PosPrimary}" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                            <TextBlock Text="PURCHASE ORDER ITEMS" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <DataGrid x:Name="ItemsGrid" Grid.Row="1"
+                                  AutoGenerateColumns="False" IsReadOnly="True"
+                                  CanUserAddRows="False" CanUserDeleteRows="False"
+                                  Style="{StaticResource MaterialDesignDataGrid}"
+                                  HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                  MinRowHeight="40" FontFamily="Segoe UI" FontSize="12"
+                                  RowBackground="Transparent"
+                                  EnableRowVirtualization="True"
+                                  VirtualizingPanel.IsVirtualizing="True"
+                                  VirtualizingPanel.VirtualizationMode="Recycling">
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource MaterialDesignDataGridColumnHeader}">
+                                    <Setter Property="Padding" Value="6,5,6,5"/>
+                                    <Setter Property="FontSize" Value="10.5"/>
+                                    <Setter Property="FontWeight" Value="Bold"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource PosSecondaryText}"/>
+                                </Style>
+                            </DataGrid.ColumnHeaderStyle>
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn Header="Store" Width="72">
+                                    <DataGridTemplateColumn.HeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource MaterialDesignDataGridColumnHeader}">
+                                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTemplateColumn.HeaderStyle>
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Background="{DynamicResource PosPanel}" CornerRadius="5" Padding="5,2"
+                                                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Store, TargetNullValue='&#x2014;'}" FontSize="9.5" FontWeight="Bold"
+                                                           Foreground="{DynamicResource PosPrimary}" TextAlignment="Center"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Item" Width="*" MinWidth="140" SortMemberPath="ProductName">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel VerticalAlignment="Center" Margin="0,4,6,4">
+                                                <TextBlock Text="{Binding ProductName}"
+                                                           FontWeight="SemiBold" FontSize="12"
+                                                           Foreground="{DynamicResource PosPrimaryText}"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           ToolTip="{Binding ProductName}"/>
+                                                <TextBlock Text="{Binding PurchaseNotes}"
+                                                           FontSize="10.5" FontStyle="Italic"
+                                                           Foreground="#D97706"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           ToolTip="{Binding PurchaseNotes}"
+                                                           Margin="0,1,0,0">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding HasNotes}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Qty / Unit" Width="88">
+                                    <DataGridTemplateColumn.HeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource MaterialDesignDataGridColumnHeader}">
+                                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTemplateColumn.HeaderStyle>
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Qty}" FontWeight="Bold" FontSize="12.5"
+                                                           Foreground="{DynamicResource PosPrimaryText}"/>
+                                                <TextBlock Text=" &#xD7; " FontSize="10" Foreground="{DynamicResource PosMutedText}" VerticalAlignment="Center"/>
+                                                <Border Background="{DynamicResource PosPanel}" CornerRadius="4" Padding="4,1">
+                                                    <TextBlock Text="{Binding Unit, TargetNullValue='pc'}" FontSize="9.5" FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource PosSecondaryText}"/>
+                                                </Border>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Est. Cost" Width="90">
+                                    <DataGridTemplateColumn.HeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource MaterialDesignDataGridColumnHeader}">
+                                            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+                                        </Style>
+                                    </DataGridTemplateColumn.HeaderStyle>
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="&#x2014;"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource PosMutedText}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasOriginalCost}" Value="True">
+                                                                <Setter Property="Text" Value="{Binding OriginalCost, StringFormat='&#x20B1;{0:N2}'}"/>
+                                                                <Setter Property="Foreground" Value="{DynamicResource PosSecondaryText}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="Sell Price" Binding="{Binding NowSellPrice, StringFormat='&#x20B1;{0:N2}'}" Width="96">
+                                    <DataGridTextColumn.HeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource MaterialDesignDataGridColumnHeader}">
+                                            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+                                        </Style>
+                                    </DataGridTextColumn.HeaderStyle>
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="#10B981"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                            <Setter Property="HorizontalAlignment" Value="Right"/>
+                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Subtotal" Binding="{Binding Subtotal, StringFormat='&#x20B1;{0:N2}'}" Width="90" FontWeight="Bold">
+                                    <DataGridTextColumn.HeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource MaterialDesignDataGridColumnHeader}">
+                                            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+                                        </Style>
+                                    </DataGridTextColumn.HeaderStyle>
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{DynamicResource PosPrimaryText}"/>
+                                            <Setter Property="HorizontalAlignment" Value="Right"/>
+                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <!-- Notes -->
+                        <Border Grid.Row="2" Background="{DynamicResource PosPanel}" CornerRadius="6" Padding="10,6" Margin="0,8,0,0">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                                    <md:PackIcon Kind="NoteTextOutline" Width="12" Height="12"
+                                                 Foreground="{DynamicResource PosSecondaryText}" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                    <TextBlock Text="NOTES / INSTRUCTIONS" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock x:Name="NotesLabel" Text="No special notes."
+                                           FontSize="11" Foreground="{DynamicResource PosPrimaryText}"
+                                           TextWrapping="Wrap" MaxHeight="44" TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- ── RIGHT COLUMN ── -->
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel>
+
+                    <!-- Financial Breakdown Card -->
+                    <Border Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}"
+                            BorderThickness="1" CornerRadius="10" Margin="0,0,0,10">
+                        <StackPanel Margin="16,14">
+                            <Grid Margin="0,0,0,10">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <md:PackIcon Kind="ChartBar" Width="14" Height="14" Foreground="{DynamicResource PosPrimary}"
+                                                 VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                    <TextBlock Text="FINANCIAL BREAKDOWN" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <Button Click="OnAutoRecalcFee" Style="{StaticResource MaterialDesignFlatButton}"
+                                        HorizontalAlignment="Right" Height="22" Padding="6,0"
+                                        ToolTip="Auto-recalculate Pasabuy Fee">
+                                    <StackPanel Orientation="Horizontal">
+                                        <md:PackIcon Kind="Refresh" Width="11" Height="11" Foreground="{DynamicResource PosPrimary}"
+                                                     VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                        <TextBlock Text="Auto-Recalc" FontSize="10" Foreground="{DynamicResource PosPrimary}"/>
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                            <Grid Margin="0,0,0,5">
+                                <TextBlock Text="Items Subtotal:" Style="{StaticResource FinanceLabel}"/>
+                                <TextBlock x:Name="SubtotalVal" Text="&#x20B1;0.00" Style="{StaticResource FinanceValue}"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,5">
+                                <TextBlock Text="Pasabuy Fee:" Style="{StaticResource FinanceLabel}"/>
+                                <TextBlock x:Name="SvcFeeVal" Text="&#x20B1;0.00" Style="{StaticResource FinanceValue}"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,5">
+                                <TextBlock Text="Delivery Fee:" Style="{StaticResource FinanceLabel}"/>
+                                <TextBlock x:Name="DelFeeVal" Text="&#x20B1;0.00" Style="{StaticResource FinanceValue}"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,5">
+                                <TextBlock Text="Discount:" Style="{StaticResource FinanceLabel}"/>
+                                <TextBlock x:Name="DiscountVal" Text="-&#x20B1;0.00" HorizontalAlignment="Right"
+                                           FontWeight="SemiBold" Foreground="#EF4444" FontSize="11.5" VerticalAlignment="Center"/>
+                            </Grid>
+                            <!-- Grand Total highlighted panel -->
+                            <Border Background="{DynamicResource PosPanel}" CornerRadius="8" Padding="10,8" Margin="0,4,0,8">
+                                <Grid>
+                                    <TextBlock Text="GRAND TOTAL" FontWeight="Bold" FontSize="12.5"
+                                               Foreground="{DynamicResource PosPrimaryText}" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="GrandTotalVal" Text="&#x20B1;0.00"
+                                               HorizontalAlignment="Right" FontWeight="Black" FontSize="18"
+                                               Foreground="{DynamicResource PosPrimary}" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <Grid Margin="0,0,0,5">
+                                <TextBlock Text="Total Paid:" Style="{StaticResource FinanceLabel}"/>
+                                <TextBlock x:Name="TotalPaidVal" Text="&#x20B1;0.00" HorizontalAlignment="Right"
+                                           FontWeight="SemiBold" Foreground="#059669" FontSize="11.5" VerticalAlignment="Center"/>
+                            </Grid>
+                            <!-- Balance Due panel -->
+                            <Border Background="#FEF2F2" CornerRadius="6" Padding="10,6">
+                                <Grid>
+                                    <TextBlock Text="Balance Due:" FontWeight="Bold" FontSize="12"
+                                               Foreground="#991B1B" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="BalanceVal" Text="&#x20B1;0.00"
+                                               HorizontalAlignment="Right" FontWeight="Black"
+                                               Foreground="#DC2626" FontSize="14" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Payment Information Card -->
+                    <Border Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}"
+                            BorderThickness="1" CornerRadius="10" Margin="0,0,0,10">
+                        <StackPanel Margin="16,14">
+                            <Grid Margin="0,0,0,10">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <md:PackIcon Kind="CashMultiple" Width="14" Height="14" Foreground="{DynamicResource PosPrimary}"
+                                                 VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                    <TextBlock Text="PAYMENT INFORMATION" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <Border x:Name="PaymentStatusBadge" CornerRadius="6" Padding="8,3"
+                                        HorizontalAlignment="Right" VerticalAlignment="Center" Background="#FEE2E2">
+                                    <TextBlock x:Name="PaymentStatusLabel" Text="UNPAID" FontSize="10.5" FontWeight="Bold" Foreground="#B91C1C"/>
+                                </Border>
+                            </Grid>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="METHOD" Style="{StaticResource SectionLabel}"/>
+                                    <TextBlock x:Name="PaymentMethodLabel" Text="&#x2014;"
+                                               FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource PosPrimaryText}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="AMOUNT PAID" Style="{StaticResource SectionLabel}"/>
+                                    <TextBlock x:Name="AmountPaidLabel" Text="&#x20B1;0.00"
+                                               FontSize="13" FontWeight="Bold" Foreground="#059669"/>
+                                </StackPanel>
+                            </Grid>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="DATE" Style="{StaticResource SectionLabel}"/>
+                                    <TextBlock x:Name="PaymentDateLabel" Text="&#x2014;"
+                                               FontSize="11" Foreground="{DynamicResource PosPrimaryText}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="REFERENCE #" Style="{StaticResource SectionLabel}"/>
+                                    <TextBlock x:Name="PaymentRefLabel" Text="&#x2014;"
+                                               FontSize="11" Foreground="{DynamicResource PosPrimaryText}" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </Grid>
+                            <StackPanel x:Name="PaymentProofPanel" Visibility="Collapsed" Margin="0,0,0,8">
+                                <TextBlock Text="PAYMENT PROOF" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
+                                <Border BorderBrush="{DynamicResource PosBorder}" BorderThickness="1" CornerRadius="6" Padding="4">
+                                    <Image x:Name="PaymentProofImage" MaxHeight="80" HorizontalAlignment="Left" Stretch="Uniform"/>
+                                </Border>
+                            </StackPanel>
+                            <Button x:Name="CollectPaymentBtn" Click="OnCollectPayment"
+                                    Style="{StaticResource Pos3DSuccessBtn}"
+                                    Height="38" Margin="0,4,0,0"
+                                    ToolTip="Record customer payment details for this order">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <md:PackIcon x:Name="MarkAsPaidBtnIcon" Kind="CheckCircle" Width="16" Height="16"
+                                                 VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                    <TextBlock x:Name="MarkAsPaidBtnText" Text="MARK AS PAID"
+                                               VerticalAlignment="Center" FontWeight="Bold" FontSize="12"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Fulfillment Status Card -->
+                    <Border Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}"
+                            BorderThickness="1" CornerRadius="10">
+                        <Grid Margin="16,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <md:PackIcon Kind="TruckCheckOutline" Width="14" Height="14" Foreground="{DynamicResource PosPrimary}"
+                                                 VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                    <TextBlock Text="FULFILLMENT STATUS" Style="{StaticResource SectionLabel}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock x:Name="FulfillmentTypeLabel" Text="Customer Pickup"
+                                           FontSize="11.5" Foreground="{DynamicResource PosSecondaryText}"/>
+                            </StackPanel>
+                            <Border Grid.Column="1" x:Name="FulfillmentStatusBadge" CornerRadius="6"
+                                    Padding="10,4" VerticalAlignment="Center" Background="#F1F5F9">
+                                <TextBlock x:Name="FulfillmentStatusLabel" Text="PENDING"
+                                           FontSize="10.5" FontWeight="Bold" Foreground="#475569"/>
+                            </Border>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- ══ 2. STATUS MESSAGE ══════════════════════════════════════════════════ -->
+        <TextBlock Grid.Row="2" x:Name="StatusMessage" Text=""
+                   Foreground="#059669" FontSize="11.5" FontFamily="Segoe UI" Margin="20,0,20,4"/>
+
+        <!-- ══ 3. BOTTOM ACTION BAR ══════════════════════════════════════════════ -->
+        <Border Grid.Row="3" Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}"
+                BorderThickness="0,1,0,0" Padding="20,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="NextActionBtn" Click="OnNextActionClick"
+                            Style="{StaticResource Pos3DPrimaryBtn}"
+                            Height="38" Padding="16,0" Margin="0,0,10,0"
+                            Visibility="Collapsed">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <md:PackIcon Kind="ArrowRightBold" Width="15" Height="15" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock x:Name="NextActionText" Text="NEXT STEP" VerticalAlignment="Center"
+                                       FontWeight="Bold" FontSize="12.5"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="EditOrderBtn" Click="OnEditOrder"
+                            Style="{StaticResource Pos3DSecondaryBtn}"
+                            Height="36" Padding="14,0" Margin="0,0,8,0"
+                            ToolTip="Edit order details, customer, address, or fees">
+                        <StackPanel Orientation="Horizontal">
+                            <md:PackIcon Kind="Pencil" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock Text="Edit Order" FontSize="11.5" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="CancelOrderBtn" Click="OnCancelOrder"
+                            Style="{StaticResource Pos3DSecondaryBtn}"
+                            Height="36" Padding="14,0" Margin="0,0,8,0"
+                            ToolTip="Cancel this purchase order">
+                        <StackPanel Orientation="Horizontal">
+                            <md:PackIcon Kind="Cancel" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock Text="Cancel Order" FontSize="11.5" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="DeleteOrderBtn" Click="OnDeleteOrder"
+                            Style="{StaticResource Pos3DDangerBtn}"
+                            Height="36" Padding="14,0" Margin="0,0,8,0"
+                            ToolTip="Permanently delete this purchase order">
+                        <StackPanel Orientation="Horizontal">
+                            <md:PackIcon Kind="DeleteOutline" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock Text="Delete" FontSize="11.5" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Content="Close" Click="OnClose" Style="{StaticResource Pos3DSecondaryBtn}"
+                            Height="36" MinWidth="80"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

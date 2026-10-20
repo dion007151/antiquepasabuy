@@ -1,0 +1,229 @@
+<Page x:Class="AntiquePasabuyPOS.Views.Pages.ReportsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+      xmlns:views="clr-namespace:AntiquePasabuyPOS.Views"
+      xmlns:controls="clr-namespace:AntiquePasabuyPOS.Controls"
+      Background="{DynamicResource PosBackground}"
+      SnapsToDevicePixels="True"
+      UseLayoutRounding="True">
+
+    <Page.Resources>
+        <!-- Clean POS Report DatePicker: full date visible, icon at far-right edge -->
+        <Style x:Key="PosReportDatePickerStyle" TargetType="DatePicker"
+               BasedOn="{StaticResource MaterialDesignOutlinedDatePicker}">
+            <!-- 185px: comfortably fits dd/MM/yyyy text + gap + 30px icon at far right -->
+            <Setter Property="Width" Value="185"/>
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="Foreground" Value="#102A43"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#94A3B8"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <!-- Only left padding; right side is owned by the icon button -->
+            <Setter Property="Padding" Value="10,0,0,0"/>
+            <!-- TextBoxViewMargin: text area ends well before the icon -->
+            <Setter Property="md:TextFieldAssist.TextBoxViewMargin" Value="0,0,34,0"/>
+            <Style.Resources>
+                <Style TargetType="DatePickerTextBox">
+                    <Setter Property="VerticalAlignment" Value="Center"/>
+                    <Setter Property="VerticalContentAlignment" Value="Center"/>
+                    <Setter Property="Padding" Value="0"/>
+                    <!-- No right margin here; TextBoxViewMargin above handles the gap -->
+                    <Setter Property="Margin" Value="0"/>
+                    <Setter Property="FontSize" Value="12.5"/>
+                    <Setter Property="FontFamily" Value="Segoe UI"/>
+                    <Setter Property="Foreground" Value="#102A43"/>
+                </Style>
+            </Style.Resources>
+        </Style>
+    </Page.Resources>
+
+    <Grid Margin="16,12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- 0. Title & Actions -->
+            <RowDefinition Height="Auto"/> <!-- 1. Date Filter & Report Tabs -->
+            <RowDefinition Height="Auto"/> <!-- 2. KPIs -->
+            <RowDefinition Height="Auto"/> <!-- 3. Sales Performance Bar Chart -->
+            <RowDefinition Height="*"/>    <!-- 4. Data Grid -->
+        </Grid.RowDefinitions>
+
+        <!-- 1. Header with Title & Action Buttons -->
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
+                <TextBlock Text="Reports &amp; Analytics" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource PosPrimaryText}" FontFamily="Segoe UI"/>
+                <TextBlock Text="Performance metrics, sales summaries, store purchasing audit, and customer insights" Foreground="{DynamicResource PosSecondaryText}" FontSize="11.5" FontFamily="Segoe UI"/>
+            </StackPanel>
+
+            <!-- ACTIONS: [ EXPORT ▼ ], [ PRINT ] -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <Button x:Name="ExportBtn" Content="EXPORT ▼" Click="OnExportClick"
+                        Style="{StaticResource Pos3DSecondaryBtn}"
+                        Padding="14,0" Margin="0,0,8,0"
+                        FontSize="11.5"
+                        ToolTip="Export report data (Excel or PDF)">
+                    <Button.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Export to Excel / CSV (.csv)" Click="OnExportExcel">
+                                <MenuItem.Icon>
+                                    <md:PackIcon Kind="FileExcel"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Export to PDF Document (.pdf)" Click="OnExportPdf">
+                                <MenuItem.Icon>
+                                    <md:PackIcon Kind="FilePdfBox"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                        </ContextMenu>
+                    </Button.ContextMenu>
+                </Button>
+
+                <Button Content="PRINT" Click="OnPrintReport"
+                        Style="{StaticResource Pos3DPrimaryBtn}"
+                        Padding="14,0"
+                        FontSize="11.5"
+                        ToolTip="Print report to receipt or document printer"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- 2. Date Shortcut & Report Tabs -->
+        <Border Grid.Row="1" Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,0,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- DATE SHORTCUT: [ Period: Combo ] [ From: Picker ] [ To: Picker ] [ Apply ] -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
+
+                    <!-- PERIOD label + combo -->
+                    <TextBlock Text="Period" FontSize="11" FontWeight="Bold" Foreground="#64748B"
+                               VerticalAlignment="Center" Margin="0,0,6,0" FontFamily="Segoe UI"/>
+                    <ComboBox x:Name="DateShortcutCombo" Width="118" Height="38" Margin="0,0,16,0"
+                              Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                              FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                              Padding="10,0,6,0"
+                              SelectionChanged="OnDateShortcutChanged">
+                        <ComboBoxItem Content="Today"/>
+                        <ComboBoxItem Content="This Week"/>
+                        <ComboBoxItem Content="This Month" IsSelected="True"/>
+                        <ComboBoxItem Content="Custom"/>
+                    </ComboBox>
+
+                    <!-- Thin vertical divider -->
+                    <Border Width="1" Height="24" Background="#CBD5E1" Margin="0,0,16,0" VerticalAlignment="Center"/>
+
+                    <!-- FROM label + date picker -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <Border Background="#F1EDFA" CornerRadius="4" Padding="7,4" Margin="0,0,7,0" VerticalAlignment="Center">
+                            <TextBlock Text="FROM" FontSize="9.5" FontWeight="Bold" Foreground="#452B86"
+                                       FontFamily="Segoe UI" VerticalAlignment="Center"/>
+                        </Border>
+                        <DatePicker x:Name="FromDate" Style="{StaticResource PosReportDatePickerStyle}"/>
+                    </StackPanel>
+
+                    <!-- TO label + date picker -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
+                        <Border Background="#F0FDF4" CornerRadius="4" Padding="7,4" Margin="0,0,7,0" VerticalAlignment="Center">
+                            <TextBlock Text="TO" FontSize="9.5" FontWeight="Bold" Foreground="#16A34A"
+                                       FontFamily="Segoe UI" VerticalAlignment="Center"/>
+                        </Border>
+                        <DatePicker x:Name="ToDate" Style="{StaticResource PosReportDatePickerStyle}"/>
+                    </StackPanel>
+
+                    <!-- APPLY button, same height as pickers -->
+                    <Button Content="Apply" Click="OnGenerate"
+                            Style="{StaticResource Pos3DPrimaryBtn}"
+                            Height="38" Padding="18,0" FontSize="12"
+                            VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- TOP REPORT TABS: [ PO SUMMARY ], [ EST VS ACTUAL ], [ TOP STORES & ITEMS ], [ CUSTOMERS ], [ CANCELLED ORDERS ] -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button x:Name="TabSales" Content="PO SUMMARY" Tag="sales" Click="OnReportTabClick"
+                            Style="{StaticResource Pos3DFilterBtn}"/>
+                    <Button x:Name="TabEstVsAct" Content="EST. VS ACTUAL" Tag="estvsact" Click="OnReportTabClick"
+                            Style="{StaticResource Pos3DFilterBtn}"
+                            ToolTip="Compare estimated budget vs actual shopper purchases"/>
+                    <Button x:Name="TabTopStores" Content="TOP STORES &amp; ITEMS" Tag="topstores" Click="OnReportTabClick"
+                            Style="{StaticResource Pos3DFilterBtn}"
+                            ToolTip="Top stores and most requested items breakdown"/>
+                    <Button x:Name="TabCustomers" Content="CUSTOMERS" Tag="customers" Click="OnReportTabClick"
+                            Style="{StaticResource Pos3DFilterBtn}"/>
+                    <Button x:Name="TabCancelled" Content="CANCELLED ORDERS" Tag="cancelled" Click="OnReportTabClick"
+                            Style="{StaticResource Pos3DFilterBtn}"
+                            ToolTip="Audit cancelled purchase orders and reasons"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 3. KPI Summary Cards (Compact 1-row with top color accents) -->
+        <UniformGrid Grid.Row="2" Columns="4" Margin="0,0,0,10">
+            <Border Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,4,0">
+                <Grid>
+                    <Border Height="3" VerticalAlignment="Top" Background="#452B86" CornerRadius="2" Margin="0,-8,0,0"/>
+                    <StackPanel Margin="0,4,0,0">
+                        <TextBlock x:Name="KpiCard1Title" Text="PURCHASE BUDGET" FontSize="9.5" FontWeight="Bold" Foreground="#64748B" FontFamily="Segoe UI"/>
+                        <TextBlock x:Name="RevenueLabel" Text="₱0.00" FontSize="17" FontWeight="Bold" Foreground="#452B86" FontFamily="Segoe UI" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+            <Border Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1.5" CornerRadius="8" Padding="12,8" Margin="2,0,2,0">
+                <Grid>
+                    <Border Height="3" VerticalAlignment="Top" Background="#16A34A" CornerRadius="2" Margin="0,-8,0,0"/>
+                    <StackPanel Margin="0,4,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <md:PackIcon Kind="CashMultiple" Width="13" Height="13" Foreground="#16A34A" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <TextBlock x:Name="KpiCard2Title" Text="PASABUY FEES" FontSize="9.5" FontWeight="Bold" Foreground="#16A34A" FontFamily="Segoe UI"/>
+                        </StackPanel>
+                        <TextBlock x:Name="PasabuyFeeLabel" Text="₱0.00" FontSize="17" FontWeight="Bold" Foreground="#15803D" FontFamily="Segoe UI" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+            <Border Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="2,0,2,0">
+                <Grid>
+                    <Border Height="3" VerticalAlignment="Top" Background="#D97706" CornerRadius="2" Margin="0,-8,0,0"/>
+                    <StackPanel Margin="0,4,0,0">
+                        <TextBlock x:Name="KpiCard3Title" Text="DELIVERY FEES" FontSize="9.5" FontWeight="Bold" Foreground="#64748B" FontFamily="Segoe UI"/>
+                        <TextBlock x:Name="DeliveryFeeLabel" Text="₱0.00" FontSize="17" FontWeight="Bold" Foreground="#D97706" FontFamily="Segoe UI" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+            <Border Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="4,0,0,0">
+                <Grid>
+                    <Border Height="3" VerticalAlignment="Top" Background="#7C3AED" CornerRadius="2" Margin="0,-8,0,0"/>
+                    <StackPanel Margin="0,4,0,0">
+                        <TextBlock x:Name="KpiCard4Title" Text="TOTAL ORDERS / ITEMS" FontSize="9.5" FontWeight="Bold" Foreground="#64748B" FontFamily="Segoe UI"/>
+                        <TextBlock x:Name="OrdersLabel" Text="0" FontSize="17" FontWeight="Bold" Foreground="#7C3AED" FontFamily="Segoe UI" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </UniformGrid>
+
+        <!-- 4. Sales Performance Bar Chart (Real Data, Smart Grouping, Interactive Hover) -->
+        <controls:SalesPerformanceChart x:Name="SalesChart" Grid.Row="3" Height="225" Margin="0,0,0,10"/>
+
+        <!-- 5. Data Display Grid -->
+        <Border Grid.Row="4" Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}" BorderThickness="1" CornerRadius="10" Padding="12,10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock x:Name="ReportTitleLabel" Text="Sales Report" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource PosPrimaryText}" FontFamily="Segoe UI" Margin="0,0,0,8"/>
+
+                <DataGrid x:Name="ReportGrid" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True"
+                          CanUserAddRows="False" Style="{StaticResource MaterialDesignDataGrid}"
+                          HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                          MinRowHeight="46" AlternationCount="2" FontFamily="Segoe UI" FontSize="12"
+                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <!-- Columns configured programmatically based on active report type -->
+                </DataGrid>
+            </Grid>
+        </Border>
+    </Grid>
+</Page>

@@ -1,0 +1,325 @@
+<Window x:Class="AntiquePasabuyPOS.Views.Dialogs.BarcodeScannerDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Barcode Scanner — Dionix POS"
+        Width="580" Height="740"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{DynamicResource PosBackground}"
+        FontFamily="Segoe UI"
+        SnapsToDevicePixels="True"
+        UseLayoutRounding="True"
+        PreviewTextInput="OnWindowPreviewTextInput">
+
+    <Grid Margin="20,16">
+        <Grid.RowDefinitions>
+            <!-- 0: Header -->
+            <RowDefinition Height="Auto"/>
+            <!-- 1: Camera Selector / Controls -->
+            <RowDefinition Height="Auto"/>
+            <!-- 2: Live Viewport with Target Overlay -->
+            <RowDefinition Height="320"/>
+            <!-- 3: Status / Feedback Card -->
+            <RowDefinition Height="Auto"/>
+            <!-- 4: Session Scan Counter & Recent Item -->
+            <RowDefinition Height="*"/>
+            <!-- 5: Footer Actions -->
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ══ 0. HEADER ═══════════════════════════════════════════════════════ -->
+        <Grid Grid.Row="0" Margin="0,0,0,12">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Width="38" Height="38" CornerRadius="10" Background="#F1EDFA" Margin="0,0,10,0">
+                    <md:PackIcon Kind="BarcodeScan" Width="22" Height="22" Foreground="{DynamicResource PosPrimary}"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Product Barcode Scanner" FontSize="17" FontWeight="Bold"
+                               Foreground="{DynamicResource PosPrimaryText}"/>
+                    <TextBlock Text="Scan product barcode with laptop webcam to add directly to PO"
+                               FontSize="11.5" Foreground="{DynamicResource PosSecondaryText}"/>
+                </StackPanel>
+            </StackPanel>
+
+            <Button HorizontalAlignment="Right" VerticalAlignment="Center"
+                    Style="{StaticResource MaterialDesignFlatButton}"
+                    Padding="6,4" Content="✕" FontSize="14" Foreground="{DynamicResource PosMutedText}"
+                    Click="OnCloseClick" ToolTip="Close scanner (ESC)"/>
+        </Grid>
+
+        <!-- ══ 1. CAMERA SELECTOR & STATUS ═════════════════════════════════════ -->
+        <Grid Grid.Row="1" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
+                <md:PackIcon Kind="Webcam" Width="16" Height="16" Foreground="{DynamicResource PosPrimary}"
+                             VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <TextBlock Text="Camera:" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource PosSecondaryText}"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <ComboBox x:Name="CameraCombo" Grid.Column="1"
+                      Style="{StaticResource MaterialDesignComboBox}"
+                      FontSize="12" FontFamily="Segoe UI"
+                      SelectionChanged="OnCameraSelectionChanged"
+                      VerticalAlignment="Center"/>
+
+            <Button Grid.Column="2" Click="OnRefreshCamerasClick"
+                    Style="{StaticResource Pos3DFilterBtn}"
+                    Height="30" Padding="8,0" Margin="8,0,0,0"
+                    ToolTip="Refresh camera list">
+                <StackPanel Orientation="Horizontal">
+                    <md:PackIcon Kind="Refresh" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <TextBlock Text="Refresh" FontSize="11" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <!-- ══ 2. LIVE CAMERA VIEWPORT & SCAN RETICLE ══════════════════════════ -->
+        <Border Grid.Row="2" Background="#0A0E17" CornerRadius="12" ClipToBounds="True"
+                BorderBrush="{DynamicResource PosBorder}" BorderThickness="1.5">
+            <Grid>
+                <!-- Live Video Feed -->
+                <Image x:Name="CameraPreviewImage" Stretch="Uniform"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+                <!-- Viewfinder Aiming Overlay -->
+                <Grid x:Name="AimingOverlay" Margin="30,20">
+                    <!-- Semi-transparent darkened vignette around scan box -->
+                    <Border BorderBrush="#8B5CF6" BorderThickness="2" CornerRadius="8"
+                            Width="300" Height="160" HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Background="#108B5CF6">
+                        <Grid>
+                            <!-- Corner bracket styling -->
+                            <!-- Top Left -->
+                            <Path Data="M 0,20 L 0,0 L 20,0" Stroke="#A855F7" StrokeThickness="3.5"
+                                  HorizontalAlignment="Left" VerticalAlignment="Top" Margin="2"/>
+                            <!-- Top Right -->
+                            <Path Data="M 0,0 L 20,0 L 20,20" Stroke="#A855F7" StrokeThickness="3.5"
+                                  HorizontalAlignment="Right" VerticalAlignment="Top" Margin="2"/>
+                            <!-- Bottom Left -->
+                            <Path Data="M 0,0 L 0,20 L 20,20" Stroke="#A855F7" StrokeThickness="3.5"
+                                  HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="2"/>
+                            <!-- Bottom Right -->
+                            <Path Data="M 20,0 L 20,20 L 0,20" Stroke="#A855F7" StrokeThickness="3.5"
+                                  HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="2"/>
+
+                            <!-- Red Laser Aiming Guide Line -->
+                            <Rectangle Height="2" Fill="#EF4444" VerticalAlignment="Center"
+                                       Margin="10,0" Opacity="0.85"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Hint Text Below Target -->
+                    <Border Background="#CC000000" CornerRadius="6" Padding="10,3"
+                            HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6">
+                        <TextBlock Text="Align product barcode inside the box"
+                                   FontSize="11" FontWeight="SemiBold" Foreground="White"/>
+                    </Border>
+                </Grid>
+
+                <!-- No Camera / Error Fallback Overlay -->
+                <Border x:Name="NoCameraPanel" Background="#111827" Visibility="Collapsed"
+                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Padding="20">
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <md:PackIcon Kind="CameraOffOutline" Width="44" Height="44" Foreground="#9CA3AF"
+                                     HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                        <TextBlock x:Name="NoCameraMessage" Text="Webcam is not available"
+                                   FontSize="14" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Please check that your laptop camera is enabled and not in use by another app."
+                                   FontSize="11.5" Foreground="#9CA3AF" HorizontalAlignment="Center" TextAlignment="Center"
+                                   Margin="0,4,0,14" MaxWidth="360" TextWrapping="Wrap"/>
+
+                        <!-- Manual Entry fallback option -->
+                        <Border Background="#1F2937" CornerRadius="8" Padding="10,6" Margin="0,4,0,0" MaxWidth="380">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="ManualBarcodeInput" Grid.Column="0"
+                                         Foreground="White" CaretBrush="White" FontSize="12.5"
+                                         md:HintAssist.Hint="Or enter barcode manually..."
+                                         md:TextFieldAssist.DecorationVisibility="Hidden"
+                                         BorderThickness="0" VerticalAlignment="Center"
+                                         KeyDown="OnManualBarcodeKeyDown"/>
+                                <Button Grid.Column="1" Click="OnManualBarcodeSubmit"
+                                        Style="{StaticResource Pos3DPrimaryBtn}" Height="30" Padding="10,0">
+                                    <TextBlock Text="Lookup" FontSize="11" FontWeight="Bold"/>
+                                </Button>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- ══ 3. DYNAMIC STATUS & DETECTION BANNER ════════════════════════════ -->
+        <Border x:Name="StatusCard" Grid.Row="3" Margin="0,10,0,0" CornerRadius="10"
+                Padding="12,10" Background="#F1EDFA" BorderBrush="#E5E1F0" BorderThickness="1">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <md:PackIcon x:Name="StatusIcon" Grid.Column="0" Kind="Camera" Width="20" Height="20"
+                                 Foreground="{DynamicResource PosPrimary}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock x:Name="StatusTitleText" Text="Camera active — ready to scan"
+                                   FontSize="12.5" FontWeight="Bold" Foreground="{DynamicResource PosPrimaryText}"/>
+                        <TextBlock x:Name="StatusSubtext" Text="Position the barcode towards your laptop camera"
+                                   FontSize="11" Foreground="{DynamicResource PosSecondaryText}" Margin="0,1,0,0"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <!-- Action buttons for alerts & price adjustment -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="EditFoundPriceBtn" Content="Change Price"
+                                Style="{StaticResource Pos3DFilterBtn}" Height="28" Padding="10,0" Margin="0,0,6,0"
+                                Visibility="Collapsed" Click="OnEditFoundPriceClick"
+                                ToolTip="Click to customize the price for this scanned item"/>
+                        <Button x:Name="AddCustomBtn" Content="+ Add as Custom"
+                                Style="{StaticResource Pos3DPrimaryBtn}" Height="28" Padding="8,0" Margin="0,0,6,0"
+                                Visibility="Collapsed" Click="OnAddCustomFromScanClick"/>
+                        <Button x:Name="DismissAlertBtn" Content="Dismiss"
+                                Style="{StaticResource Pos3DFilterBtn}" Height="28" Padding="10,0"
+                                Visibility="Collapsed" Click="OnDismissAlertClick"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Manual Price Entry (shown when external lookup found name but no price, or user edits price) -->
+                <Border x:Name="ManualPricePanel" Visibility="Collapsed"
+                        Background="#FEF9C3" CornerRadius="8" Padding="10,8" Margin="0,8,0,0"
+                        BorderBrush="#FDE68A" BorderThickness="1">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock x:Name="ManualPriceProductLabel" Text="Enter price for this product:"
+                                       FontSize="11.5" FontWeight="SemiBold" Foreground="#92400E"/>
+                        </StackPanel>
+
+                        <TextBox x:Name="ManualPriceInput" Grid.Column="1"
+                                 Width="105" FontSize="13" FontWeight="Bold" Margin="8,0"
+                                 md:HintAssist.Hint="₱ Price"
+                                 VerticalAlignment="Center"
+                                 KeyDown="OnManualPriceKeyDown"/>
+
+                        <Button Grid.Column="2" Click="OnManualPriceSubmit"
+                                Style="{StaticResource Pos3DPrimaryBtn}" Height="30" Padding="12,0">
+                            <TextBlock Text="+ Set Price" FontSize="11.5" FontWeight="Bold"/>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <!-- Quick Register Unknown Product Panel (shown when barcode not in any database) -->
+                <Border x:Name="QuickRegisterPanel" Visibility="Collapsed"
+                        Background="#FEF2F2" CornerRadius="8" Padding="10,8" Margin="0,8,0,0"
+                        BorderBrush="#FECACA" BorderThickness="1">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock x:Name="QuickRegisterBarcodeLabel" Text="New Barcode: 123456789. Enter product details:"
+                                   FontSize="11.5" FontWeight="SemiBold" Foreground="#991B1B" Margin="0,0,0,6"/>
+                        <Grid Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="110"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="QuickRegisterNameInput" Grid.Column="0"
+                                     md:HintAssist.Hint="Product Name (e.g. Piattos Cheese)"
+                                     FontSize="12" Margin="0,0,8,0"
+                                     VerticalAlignment="Center"
+                                     KeyDown="OnQuickRegisterKeyDown"/>
+                            <TextBox x:Name="QuickRegisterPriceInput" Grid.Column="1"
+                                     md:HintAssist.Hint="₱ Price"
+                                     FontSize="12" FontWeight="Bold" Margin="0,0,8,0"
+                                     VerticalAlignment="Center"
+                                     KeyDown="OnQuickRegisterKeyDown"/>
+                            <Button Grid.Column="2" Click="OnQuickRegisterSubmit"
+                                    Style="{StaticResource Pos3DPrimaryBtn}" Height="30" Padding="12,0">
+                                <TextBlock Text="+ Save &amp; Add" FontSize="11" FontWeight="Bold"/>
+                            </Button>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <!-- ══ 4. RECENTLY SCANNED PRODUCT SUMMARY ═════════════════════════════ -->
+        <Border Grid.Row="4" Margin="0,10,0,10" Background="{DynamicResource PosSurface}"
+                BorderBrush="{DynamicResource PosBorder}" BorderThickness="1" CornerRadius="10" Padding="12,8">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Margin="0,0,0,4">
+                    <TextBlock Text="SCANNER SESSION" FontSize="10" FontWeight="Bold"
+                               Foreground="{DynamicResource PosSecondaryText}"/>
+                    <TextBlock x:Name="SessionStatsLabel" Text="0 items scanned"
+                               HorizontalAlignment="Right" FontSize="11" FontWeight="Bold"
+                               Foreground="{DynamicResource PosPrimary}"/>
+                </Grid>
+
+                <!-- Last Scanned Details -->
+                <Border Grid.Row="1" Background="{DynamicResource PosBackground}" CornerRadius="8" Padding="10,6">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock x:Name="LastScannedProductName" Text="No product scanned yet"
+                                       FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource PosPrimaryText}"/>
+                            <TextBlock x:Name="LastScannedBarcodeText" Text="Continuous scanning is enabled. Scanner stays open for multiple items."
+                                       FontSize="10.5" Foreground="{DynamicResource PosMutedText}" Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <TextBlock x:Name="LastScannedPriceText" Grid.Column="1" Text="₱0.00"
+                                   FontSize="13" FontWeight="Bold" Foreground="{DynamicResource PosPrimary}"
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- ══ 5. FOOTER ACTIONS ═══════════════════════════════════════════════ -->
+        <Grid Grid.Row="5">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Width="8" Height="8" CornerRadius="4" Background="#10B981" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                <TextBlock Text="Continuous Scanner Active" FontSize="11" FontWeight="SemiBold"
+                           Foreground="{DynamicResource PosSecondaryText}" VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Click="OnCloseClick"
+                        Style="{StaticResource Pos3DPrimaryBtn}"
+                        Height="38" Padding="20,0"
+                        ToolTip="Finish scanning and return to purchase order">
+                    <StackPanel Orientation="Horizontal">
+                        <md:PackIcon Kind="Check" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="DONE SCANNING" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>
