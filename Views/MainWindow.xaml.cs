@@ -260,7 +260,6 @@ public partial class MainWindow : Window
             if (NavBtn_Dashboard != null)    _navButtons["Dashboard"]   = NavBtn_Dashboard;
             if (NavBtn_NewOrder != null)     _navButtons["NewOrder"]    = NavBtn_NewOrder;
             if (NavBtn_Orders != null)       _navButtons["Orders"]      = NavBtn_Orders;
-            if (NavBtn_Masterlists != null)  _navButtons["Masterlists"] = NavBtn_Masterlists;
             if (NavBtn_Buying != null)       _navButtons["Buying"]      = NavBtn_Buying;
             if (NavBtn_Products != null)     _navButtons["Products"]    = NavBtn_Products;
             if (NavBtn_Stores != null)       _navButtons["Stores"]      = NavBtn_Stores;
@@ -325,7 +324,6 @@ public partial class MainWindow : Window
             ["PendingOrders"]     = ("Purchase Orders",                            "Orders"),
             ["CompletedOrders"]   = ("Purchase Orders",                            "Orders"),
             ["BoughtOrders"]      = ("Purchase Orders",                            "Orders"),
-            ["Masterlists"]       = ("Masterlists",                                "Masterlists"),
             ["Customers"]         = ("Customers",                                  "Customers"),
             ["SalesReport"]       = ("Reports",                                    "Reports"),
             ["BuyingReport"]      = ("Reports",                                    "Reports"),
@@ -366,7 +364,7 @@ public partial class MainWindow : Window
     private void LoadPage(string id)
     {
         // Parameterized filter routes (PendingOrders, BoughtOrders, CompletedOrders, SalesReport, etc.) or NewOrder are created fresh
-        bool isCacheable = id is "Dashboard" or "Orders" or "Masterlists" or "Buying" or "Customers" or "Stores" or "Products" or "Reports" or "Settings"
+        bool isCacheable = id is "Dashboard" or "Orders" or "Buying" or "Customers" or "Stores" or "Products" or "Reports" or "Settings"
                                or "RestoDashboard" or "RestoSales" or "RestoTables" or "RestoOrders" or "RestoKitchen" or "RestoMenu" or "RestoInventory" or "RestoCustomers" or "RestoStaff";
 
         Page? page = null;
@@ -382,7 +380,6 @@ public partial class MainWindow : Window
                 "Dashboard"              => new DashboardPage(_db, _user, Navigate),
                 "NewOrder"               => new NewOrderPage(_db, _user, onSuccess: () => Navigate("Orders")),
                 "Orders"                 => new OrdersPage(_db, _user, Navigate),
-                "Masterlists"            => new MasterlistsPage(_db, _user, Navigate),
                 "Buying"                 => new BuyingListPage(_db, _user, Navigate),
                 "PendingOrders"          => new OrdersPage(_db, _user, Navigate, initialFilter: OrderStatus.WAITING_CONFIRMATION),
                 "BoughtOrders"           => new OrdersPage(_db, _user, Navigate, initialFilter: OrderStatus.BOUGHT),

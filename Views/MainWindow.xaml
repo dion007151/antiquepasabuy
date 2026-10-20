@@ -307,15 +307,6 @@
                                 </Grid>
                             </Button>
 
-                            <!-- Masterlists -->
-                            <Button x:Name="NavBtn_Masterlists" Style="{StaticResource Pos3DNavMainButtonStyle}" Click="OnNavButtonClick" Tag="Masterlists"
-                                    ToolTip="Masterlists — manage weekly customer order batches">
-                                <Grid>
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="26"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                    <md:PackIcon Kind="ClipboardTextOutline" Width="18" Height="18" VerticalAlignment="Center"/>
-                                    <TextBlock Grid.Column="1" Text="Masterlists" FontSize="12.5" FontWeight="SemiBold" FontFamily="Segoe UI" VerticalAlignment="Center" Margin="6,0,0,0"/>
-                                </Grid>
-                            </Button>
 
                             <!-- Shopping Workspace -->
                             <Button x:Name="NavBtn_Buying" Style="{StaticResource Pos3DNavMainButtonStyle}" Click="OnNavButtonClick" Tag="Buying"
