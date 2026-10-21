@@ -21,6 +21,13 @@ public class BuyingStateService(AppDbContext db)
             var item = db.OrderItems.Include(i => i.Order).FirstOrDefault(i => i.Id == itemId);
             if (item is null) return (false, "Order item not found.");
 
+            // If item was previously BOUGHT_FROM_STOCK, restore stock first
+            if (item.Status == ItemStatus.BOUGHT_FROM_STOCK)
+            {
+                var stockSvc = new StockService(db);
+                stockSvc.RestoreStock(item.ProductName, item.PurchasedQty ?? item.Qty, item.Order?.OrderNo ?? "", item.Id);
+            }
+
             item.PurchasedQty = purchasedQty;
             item.ActualPrice = actualPrice;
             item.Status = ItemStatus.PURCHASED;
@@ -42,6 +49,51 @@ public class BuyingStateService(AppDbContext db)
         {
             tx.Rollback();
             return (false, $"Error updating item: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Marks an order item as BOUGHT_FROM_STOCK, reduces on-hand quantity for matching stock product,
+    /// and advances order status.
+    /// </summary>
+    public (bool ok, string msg) MarkItemBoughtFromStock(int itemId, decimal? actualPrice = null)
+    {
+        using var tx = db.Database.BeginTransaction();
+        try
+        {
+            var item = db.OrderItems.Include(i => i.Order).FirstOrDefault(i => i.Id == itemId);
+            if (item is null) return (false, "Order item not found.");
+
+            if (item.Status == ItemStatus.BOUGHT_FROM_STOCK)
+                return (true, $"'{item.ProductName}' is already marked as bought from stock.");
+
+            var stockSvc = new StockService(db);
+            var deducted = stockSvc.RecordSaleFromStock(item.ProductName, item.Qty, item.Order?.OrderNo ?? "", item.Id);
+
+            item.Status = ItemStatus.BOUGHT_FROM_STOCK;
+            item.ActualPrice = actualPrice ?? item.ActualPrice ?? item.EstimatedPrice;
+            item.PurchasedQty = item.Qty;
+            item.PurchaseDate = DateTime.Now;
+
+            db.SaveChanges();
+            EvaluateOrderBuyingProgress(item.OrderId);
+
+            tx.Commit();
+            OrderEventBus.NotifyItemStatusChanged(itemId, ItemStatus.BOUGHT_FROM_STOCK);
+
+            if (deducted)
+            {
+                return (true, $"Marked '{item.ProductName}' as Bought from stock (inventory reduced by {item.Qty}).");
+            }
+            else
+            {
+                return (true, $"Marked '{item.ProductName}' as Bought from stock (no matching stock product found; no inventory changed).");
+            }
+        }
+        catch (Exception ex)
+        {
+            tx.Rollback();
+            return (false, $"Error marking bought from stock: {ex.Message}");
         }
     }
 
@@ -99,6 +151,12 @@ public class BuyingStateService(AppDbContext db)
             var item = db.OrderItems.Include(i => i.Order).FirstOrDefault(i => i.Id == itemId);
             if (item is null) return (false, "Order item not found.");
 
+            if (item.Status == ItemStatus.BOUGHT_FROM_STOCK)
+            {
+                var stockSvc = new StockService(db);
+                stockSvc.RestoreStock(item.ProductName, item.PurchasedQty ?? item.Qty, item.Order?.OrderNo ?? "", item.Id);
+            }
+
             item.Status = ItemStatus.UNAVAILABLE;
             item.UnavailableReason = string.IsNullOrWhiteSpace(reason) ? "Out of Stock" : reason.Trim();
             if (!string.IsNullOrWhiteSpace(notes)) item.PurchaseNotes = notes.Trim();
@@ -133,9 +191,15 @@ public class BuyingStateService(AppDbContext db)
             var items = db.OrderItems.Include(i => i.Order).Where(i => itemIds.Contains(i.Id)).ToList();
             if (items.Count == 0) return (false, "No matching items found.", 0);
 
+            var stockSvc = new StockService(db);
             var impactedOrderIds = new HashSet<int>();
             foreach (var item in items)
             {
+                if (item.Status == ItemStatus.BOUGHT_FROM_STOCK)
+                {
+                    stockSvc.RestoreStock(item.ProductName, item.PurchasedQty ?? item.Qty, item.Order?.OrderNo ?? "", item.Id);
+                }
+
                 item.Status = ItemStatus.UNAVAILABLE;
                 item.UnavailableReason = string.IsNullOrWhiteSpace(reason) ? "Out of Stock" : reason.Trim();
                 if (!string.IsNullOrWhiteSpace(notes)) item.PurchaseNotes = notes.Trim();
@@ -171,6 +235,12 @@ public class BuyingStateService(AppDbContext db)
         {
             var item = db.OrderItems.Include(i => i.Order).FirstOrDefault(i => i.Id == itemId);
             if (item is null) return (false, "Order item not found.");
+
+            if (item.Status == ItemStatus.BOUGHT_FROM_STOCK)
+            {
+                var stockSvc = new StockService(db);
+                stockSvc.RestoreStock(item.ProductName, item.PurchasedQty ?? item.Qty, item.Order?.OrderNo ?? "", item.Id);
+            }
 
             item.Status = ItemStatus.PENDING;
             item.PurchasedQty = null;
@@ -212,7 +282,7 @@ public class BuyingStateService(AppDbContext db)
         var activeItems = items.Where(i => i.Status != ItemStatus.CANCELLED).ToList();
         if (activeItems.Count == 0) return;
 
-        var purchasedCount = activeItems.Count(i => i.Status == ItemStatus.PURCHASED);
+        var purchasedCount = activeItems.Count(i => i.Status == ItemStatus.PURCHASED || i.Status == ItemStatus.BOUGHT_FROM_STOCK);
         var unavailCount   = activeItems.Count(i => i.Status == ItemStatus.UNAVAILABLE);
         var pendingCount   = activeItems.Count(i => i.Status == ItemStatus.PENDING);
 
@@ -237,16 +307,11 @@ public class BuyingStateService(AppDbContext db)
             return;
         }
 
-        // Recalculate Pasabuy Service Fee dynamically based on active (non-unavailable) items
-        var activeSubtotal = activeItems
-            .Where(i => i.Status != ItemStatus.UNAVAILABLE)
-            .Sum(i => (i.ActualPrice ?? i.EstimatedPrice) * (decimal)i.Qty);
-
+        // Recalculate Pasabuy Service Fee dynamically using Calc
         if (BusinessProfileService.IsPasabuyFeeEnabled(db))
         {
-            order.ServiceFee = activeSubtotal > 0
-                ? PasabuyFeeService.CalculateServiceFee(activeSubtotal, db)
-                : 0m;
+            var tiers = PasabuyFeeService.GetRateTiers(db);
+            order.ServiceFee = Calc.PasabuyFee(order, tiers);
         }
         else
         {
@@ -317,7 +382,7 @@ public class BuyingStateService(AppDbContext db)
             var count = 0;
             foreach (var ord in activeOrders)
             {
-                if (ord.Items.Count > 0 && ord.Items.All(i => i.Status is ItemStatus.PURCHASED or ItemStatus.UNAVAILABLE or ItemStatus.CANCELLED))
+                if (ord.Items.Count > 0 && ord.Items.All(i => i.Status is ItemStatus.PURCHASED or ItemStatus.BOUGHT_FROM_STOCK or ItemStatus.UNAVAILABLE or ItemStatus.CANCELLED))
                 {
                     ord.Status = OrderStatus.BOUGHT;
                     ord.UpdatedAt = DateTime.Now;

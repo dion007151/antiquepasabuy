@@ -343,6 +343,18 @@ public class OrderService(AppDbContext db)
         return svc.MarkItemUnavailable(itemId, reason, notes);
     }
 
+    public (bool ok, string msg) MarkItemBoughtFromStock(int itemId, decimal? actualPrice = null)
+    {
+        var svc = new BuyingStateService(db);
+        return svc.MarkItemBoughtFromStock(itemId, actualPrice);
+    }
+
+    public (bool ok, string msg) ResetItemToPending(int itemId)
+    {
+        var svc = new BuyingStateService(db);
+        return svc.ResetItemToPending(itemId);
+    }
+
     public PasabuyDashboardStats GetPasabuyStats()
     {
         var today = DateTime.Today;

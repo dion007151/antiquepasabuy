@@ -93,9 +93,10 @@ public class OrderStatusService(AppDbContext db)
             foreach (var entry in db.ChangeTracker.Entries().ToList())
                 entry.State = Microsoft.EntityFrameworkCore.EntityState.Detached;
 
-            // Load only Order + Delivery — freshly from DB
+            // Load Order + Delivery + Items — freshly from DB
             var order = db.Orders
                 .Include(o => o.Delivery)
+                .Include(o => o.Items)
                 .FirstOrDefault(o => o.Id == orderId);
 
             if (order is null)
@@ -136,6 +137,16 @@ public class OrderStatusService(AppDbContext db)
                 {
                     order.Delivery.Status = DeliveryStatus.DELIVERED;
                     order.Delivery.DeliveredAt ??= DateTime.Now;
+                }
+            }
+
+            // Restore inventory for any Bought from stock items if order is cancelled
+            if (newStatus == OrderStatus.CANCELLED && order.Items != null)
+            {
+                var stockSvc = new StockService(db);
+                foreach (var item in order.Items.Where(i => i.Status == ItemStatus.BOUGHT_FROM_STOCK))
+                {
+                    stockSvc.RestoreStock(item.ProductName, item.PurchasedQty ?? item.Qty, order.OrderNo, item.Id);
                 }
             }
 

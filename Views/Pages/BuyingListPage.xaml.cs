@@ -847,6 +847,45 @@ public partial class BuyingListPage : Page
         }
     }
 
+    // ══ ROW ACTION: [ BOUGHT FROM STOCK ] ══════════════════════════════════════
+    private void OnMarkBoughtFromStockClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is BuyingItemRowVm row)
+        {
+            var item = row.Item;
+            var svc = new BuyingStateService(_db);
+            var (ok, msg) = svc.MarkItemBoughtFromStock(item.Id);
+            if (ok)
+            {
+                LoadData();
+                MessageBox.Show(msg, "Bought from Stock", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                MessageBox.Show(msg, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+    }
+
+    // ══ ROW ACTION: [ RESET TO PENDING ] ═══════════════════════════════════════
+    private void OnResetItemToPendingClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is BuyingItemRowVm row)
+        {
+            var item = row.Item;
+            var svc = new BuyingStateService(_db);
+            var (ok, msg) = svc.ResetItemToPending(item.Id);
+            if (ok)
+            {
+                LoadData();
+            }
+            else
+            {
+                MessageBox.Show(msg, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+    }
+
     // ══ ROW ACTION: [ UNAVAILABLE ] ══════════════════════════════════════════
     private void OnMarkUnavailableClick(object sender, RoutedEventArgs e)
     {
@@ -1239,6 +1278,8 @@ public class BuyingItemRowVm : INotifyPropertyChanged
     private static readonly SolidColorBrush PartialFg = Freeze(new SolidColorBrush(Color.FromRgb(55, 48, 163)));
     private static readonly SolidColorBrush PendingBg = Freeze(new SolidColorBrush(Color.FromRgb(254, 243, 199)));
     private static readonly SolidColorBrush PendingFg = Freeze(new SolidColorBrush(Color.FromRgb(146, 64, 14)));
+    private static readonly SolidColorBrush StockBg = Freeze(new SolidColorBrush(Color.FromRgb(224, 242, 254)));
+    private static readonly SolidColorBrush StockFg = Freeze(new SolidColorBrush(Color.FromRgb(3, 105, 161)));
 
     private static SolidColorBrush Freeze(SolidColorBrush b) { b.Freeze(); return b; }
 
@@ -1255,6 +1296,7 @@ public class BuyingItemRowVm : INotifyPropertyChanged
     public decimal EstimatedPrice => Item.EstimatedPrice;
 
     public bool IsPurchased => Item.Status == ItemStatus.Purchased;
+    public bool IsBoughtFromStock => Item.Status == ItemStatus.BOUGHT_FROM_STOCK;
     public bool IsUnavailable => Item.Status == ItemStatus.Unavailable;
     public bool IsPending => Item.Status == ItemStatus.Pending;
 
@@ -1287,6 +1329,7 @@ public class BuyingItemRowVm : INotifyPropertyChanged
     public string StatusText => Item.Status switch
     {
         ItemStatus.Purchased => "PURCHASED",
+        ItemStatus.BOUGHT_FROM_STOCK => "FROM STOCK",
         ItemStatus.Unavailable => $"UNAVAILABLE ({Item.UnavailableReason ?? "Out of Stock"})",
         _ => "PENDING"
     };
@@ -1294,6 +1337,7 @@ public class BuyingItemRowVm : INotifyPropertyChanged
     public Brush StatusBgBrush => Item.Status switch
     {
         ItemStatus.Purchased => PurchasedBg,
+        ItemStatus.BOUGHT_FROM_STOCK => StockBg,
         ItemStatus.Unavailable => UnavailBg,
         _ => PendingBg
     };
@@ -1301,6 +1345,7 @@ public class BuyingItemRowVm : INotifyPropertyChanged
     public Brush StatusFgBrush => Item.Status switch
     {
         ItemStatus.Purchased => PurchasedFg,
+        ItemStatus.BOUGHT_FROM_STOCK => StockFg,
         ItemStatus.Unavailable => UnavailFg,
         _ => PendingFg
     };
@@ -1311,6 +1356,7 @@ public class BuyingItemRowVm : INotifyPropertyChanged
         OnPropertyChanged(nameof(StatusBgBrush));
         OnPropertyChanged(nameof(StatusFgBrush));
         OnPropertyChanged(nameof(IsPurchased));
+        OnPropertyChanged(nameof(IsBoughtFromStock));
         OnPropertyChanged(nameof(IsUnavailable));
         OnPropertyChanged(nameof(IsPending));
         OnPropertyChanged(nameof(ActualPriceDisplay));

@@ -40,6 +40,11 @@ public class AppDbContext : DbContext
         _dbPath = Path.Combine(folder, "antique_pasabuy.db");
     }
 
+    public AppDbContext(string dbPath)
+    {
+        _dbPath = dbPath;
+    }
+
     protected override void OnConfiguring(DbContextOptionsBuilder opts)
         => opts.UseSqlite($"Data Source={_dbPath}");
 

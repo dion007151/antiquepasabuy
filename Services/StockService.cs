@@ -80,7 +80,7 @@ public class StockService
     /// <summary>
     /// Decrements stock when an order item is marked Bought from Stock.
     /// </summary>
-    public bool RecordSaleFromStock(string productName, double qty, string orderNo, int orderItemId)
+    public bool RecordSaleFromStock(string productName, double qty, string orderNo, int? orderItemId = null)
     {
         if (string.IsNullOrWhiteSpace(productName) || qty <= 0) return false;
 
@@ -90,6 +90,10 @@ public class StockService
 
         product.StockQuantity -= qty;
 
+        int? validOrderItemId = (orderItemId.HasValue && _db.OrderItems.Any(i => i.Id == orderItemId.Value))
+            ? orderItemId
+            : null;
+
         var movement = new StockMovement
         {
             ProductId = product.Id,
@@ -97,7 +101,7 @@ public class StockService
             ChangeQty = -qty,
             NewQuantity = product.StockQuantity,
             Note = $"Order {orderNo}",
-            OrderItemId = orderItemId
+            OrderItemId = validOrderItemId
         };
 
         _db.StockMovements.Add(movement);
@@ -108,7 +112,7 @@ public class StockService
     /// <summary>
     /// Restores stock when an order item previously bought from stock is reverted or cancelled.
     /// </summary>
-    public bool RestoreStock(string productName, double qty, string orderNo, int orderItemId)
+    public bool RestoreStock(string productName, double qty, string orderNo, int? orderItemId = null)
     {
         if (string.IsNullOrWhiteSpace(productName) || qty <= 0) return false;
 
@@ -118,6 +122,10 @@ public class StockService
 
         product.StockQuantity += qty;
 
+        int? validOrderItemId = (orderItemId.HasValue && _db.OrderItems.Any(i => i.Id == orderItemId.Value))
+            ? orderItemId
+            : null;
+
         var movement = new StockMovement
         {
             ProductId = product.Id,
@@ -125,7 +133,7 @@ public class StockService
             ChangeQty = qty,
             NewQuantity = product.StockQuantity,
             Note = $"Order {orderNo} cancelled",
-            OrderItemId = orderItemId
+            OrderItemId = validOrderItemId
         };
 
         _db.StockMovements.Add(movement);

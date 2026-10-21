@@ -31,6 +31,27 @@ public class OrderItemEntry : INotifyPropertyChanged
     public ProductFeeType FeeType { get; set; } = ProductFeeType.STANDARD;
     public decimal? ManualFeeAmount { get; set; }
 
+    public bool IsStockItem { get; set; } = false;
+    private double? _stockOnHand;
+    public double? StockOnHand
+    {
+        get => _stockOnHand;
+        set
+        {
+            if (_stockOnHand == value) return;
+            _stockOnHand = value;
+            OnPropertyChanged(nameof(StockOnHand));
+            OnPropertyChanged(nameof(StockOnHandDisplay));
+            OnPropertyChanged(nameof(HasStockWarning));
+            OnPropertyChanged(nameof(StockWarningText));
+        }
+    }
+
+    public string StockOnHandDisplay => IsStockItem && StockOnHand.HasValue ? $"{StockOnHand.Value:0.##} on hand" : "";
+
+    public bool HasStockWarning => IsStockItem && StockOnHand.HasValue && Qty > StockOnHand.Value;
+    public string StockWarningText => HasStockWarning ? $"Only {StockOnHand!.Value:0.##} on hand; remaining will need to be bought" : "";
+
     public decimal Price
     {
         get => _price;
@@ -66,6 +87,8 @@ public class OrderItemEntry : INotifyPropertyChanged
             _qty = value;
             OnPropertyChanged(nameof(Qty));
             OnPropertyChanged(nameof(Subtotal));
+            OnPropertyChanged(nameof(HasStockWarning));
+            OnPropertyChanged(nameof(StockWarningText));
         }
     }
 
@@ -86,6 +109,10 @@ public class ProductTileVm : INotifyPropertyChanged
     public decimal Price    => Product.Price;
     public string  Unit     => string.IsNullOrWhiteSpace(Product.Unit)     ? "pc"      : Product.Unit;
     public bool    IsActive => Product.IsActive;
+
+    public bool   IsStockItem   => Product.IsStockItem;
+    public double StockQuantity => Product.StockQuantity;
+    public string StockDisplay  => IsStockItem ? $"{StockQuantity:0.##} on hand" : "";
 
     private ImageSource? _imageSource;
     private bool _imageLoaded = false;
@@ -476,7 +503,7 @@ public partial class NewOrderPage : Page
         }
         else
         {
-            var store = !string.IsNullOrWhiteSpace(prod.Store) ? prod.Store : "General";
+            var store = prod.IsStockItem ? "On hand" : (!string.IsNullOrWhiteSpace(prod.Store) ? prod.Store : "General");
             _items.Add(new OrderItemEntry
             {
                 Name  = prod.Name,
@@ -487,7 +514,9 @@ public partial class NewOrderPage : Page
                 CostPrice = prod.CostPrice,
                 FeeType = prod.FeeType,
                 ManualFeeAmount = prod.ManualFeeAmount,
-                IsFeeExempt = prod.FeeType == ProductFeeType.NONE || prod.IsFeeExempt
+                IsFeeExempt = prod.FeeType == ProductFeeType.NONE || prod.IsFeeExempt,
+                IsStockItem = prod.IsStockItem,
+                StockOnHand = prod.StockQuantity
             });
             // Sync store label
             if (!string.IsNullOrWhiteSpace(store)) SyncPrimaryStoreLabel(store);
@@ -515,7 +544,7 @@ public partial class NewOrderPage : Page
 
         if (prod is null) return;
 
-        var store = !string.IsNullOrWhiteSpace(prod.Store) ? prod.Store : "General";
+        var store = prod.IsStockItem ? "On hand" : (!string.IsNullOrWhiteSpace(prod.Store) ? prod.Store : "General");
         if (!string.IsNullOrWhiteSpace(store)) _lastUsedStore = store;
 
         var existing = _items.FirstOrDefault(i =>
@@ -536,7 +565,9 @@ public partial class NewOrderPage : Page
                 CostPrice = prod.CostPrice,
                 FeeType = prod.FeeType,
                 ManualFeeAmount = prod.ManualFeeAmount,
-                IsFeeExempt = prod.FeeType == ProductFeeType.NONE || prod.IsFeeExempt
+                IsFeeExempt = prod.FeeType == ProductFeeType.NONE || prod.IsFeeExempt,
+                IsStockItem = prod.IsStockItem,
+                StockOnHand = prod.StockQuantity
             });
         }
     }
@@ -586,10 +617,11 @@ public partial class NewOrderPage : Page
         if (QuickStoreCombo == null) return;
         var stores = _db.Stores.Where(s => s.IsActive).OrderBy(s => s.Name).Select(s => s.Name).ToList();
         if (stores.Count == 0) stores = new List<string> { "SM", "Robinsons", "S&R", "Mercury Drug", "General" };
+        if (!stores.Contains("On hand")) stores.Insert(0, "On hand");
         QuickStoreCombo.ItemsSource = stores;
         var defaultStore = !string.IsNullOrWhiteSpace(_lastUsedStore) && stores.Contains(_lastUsedStore)
             ? _lastUsedStore
-            : stores.FirstOrDefault() ?? "SM";
+            : stores.FirstOrDefault(s => s != "On hand") ?? "SM";
         QuickStoreCombo.SelectedItem = defaultStore;
         SyncPrimaryStoreLabel(defaultStore);
     }
@@ -646,6 +678,15 @@ public partial class NewOrderPage : Page
         }
 
         var matchedProd = _allProducts?.FirstOrDefault(p => string.Equals(p.Name, itemName, StringComparison.OrdinalIgnoreCase));
+        var isStock = matchedProd?.IsStockItem ?? false;
+        var stockOnHand = matchedProd?.StockQuantity;
+
+        if (isStock && (string.IsNullOrWhiteSpace(store) || store == "SM" || store == "General"))
+        {
+            store = "On hand";
+        }
+        SyncPrimaryStoreLabel(store);
+
         var matchedCost = matchedProd?.CostPrice;
 
         var matchedFeeType = matchedProd?.FeeType ?? ProductFeeType.STANDARD;
@@ -662,16 +703,51 @@ public partial class NewOrderPage : Page
             CostPrice = matchedCost,
             FeeType = matchedFeeType,
             ManualFeeAmount = matchedManualFee,
-            IsFeeExempt = matchedFeeType == ProductFeeType.NONE || (matchedProd?.IsFeeExempt ?? false)
+            IsFeeExempt = matchedFeeType == ProductFeeType.NONE || (matchedProd?.IsFeeExempt ?? false),
+            IsStockItem = isStock,
+            StockOnHand = stockOnHand
         });
 
         // Reset inputs for next rapid keyboard entry
         if (QuickItemNameBox != null) QuickItemNameBox.Text = string.Empty;
         if (QuickPriceBox != null) QuickPriceBox.Text = string.Empty;
         if (QuickQtyBox != null) QuickQtyBox.Text = "1";
+        if (QuickStockHint != null) QuickStockHint.Visibility = Visibility.Collapsed;
 
         // Keep cursor on Item Name box so encoder never touches mouse
         QuickItemNameBox?.Focus();
+    }
+
+    private void OnQuickItemNameChanged(object sender, TextChangedEventArgs e)
+    {
+        var text = QuickItemNameBox?.Text?.Trim() ?? "";
+        if (string.IsNullOrEmpty(text))
+        {
+            if (QuickStockHint != null) QuickStockHint.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var match = _allProducts?.FirstOrDefault(p => string.Equals(p.Name, text, StringComparison.OrdinalIgnoreCase));
+        if (match != null && match.IsStockItem)
+        {
+            if (QuickStockHint != null)
+            {
+                QuickStockHint.Text = $"[{match.StockQuantity:0.##} on hand]";
+                QuickStockHint.Visibility = Visibility.Visible;
+            }
+            if (QuickStoreCombo != null && (QuickStoreCombo.SelectedItem as string == "SM" || string.IsNullOrWhiteSpace(QuickStoreCombo.Text)))
+            {
+                QuickStoreCombo.SelectedItem = "On hand";
+            }
+            if (string.IsNullOrWhiteSpace(QuickPriceBox?.Text) || QuickPriceBox?.Text == "0" || QuickPriceBox?.Text == "0.00")
+            {
+                if (QuickPriceBox != null) QuickPriceBox.Text = match.Price.ToString("N2");
+            }
+        }
+        else
+        {
+            if (QuickStockHint != null) QuickStockHint.Visibility = Visibility.Collapsed;
+        }
     }
 
     // ── Custom / Manual Item ─────────────────────────────────────────────────

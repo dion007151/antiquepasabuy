@@ -624,12 +624,18 @@
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <!-- When Pending: [ Bought ] and [ Not available ] -->
+                                        <!-- When Pending: [ Bought ] [ From stock ] [ Not available ] -->
                                         <Button Content="Bought" Tag="{Binding}"
                                                 Click="OnMarkPurchasedClick"
                                                 Visibility="{Binding IsPending, Converter={StaticResource BoolToVis}}"
                                                 Style="{StaticResource Pos3DTableSuccessBtn}"
                                                 Margin="0,0,6,0"/>
+                                        <Button Content="From stock" Tag="{Binding}"
+                                                Click="OnMarkBoughtFromStockClick"
+                                                Visibility="{Binding IsPending, Converter={StaticResource BoolToVis}}"
+                                                Style="{StaticResource Pos3DTableActionBtn}"
+                                                Margin="0,0,6,0"
+                                                ToolTip="Fulfill item directly from on-hand inventory"/>
                                         <Button Content="Not available" Tag="{Binding}"
                                                 Click="OnMarkUnavailableClick"
                                                 Visibility="{Binding IsPending, Converter={StaticResource BoolToVis}}"
@@ -642,6 +648,18 @@
                                                 Visibility="{Binding IsUnavailable, Converter={StaticResource BoolToVis}}"
                                                 Style="{StaticResource Pos3DTableDangerBtn}"
                                                 ToolTip="Resolve item: Try another store, contact customer, or remove item"/>
+
+                                        <!-- When Bought from stock: [ VIEW ORDER ] and [ RESET ] -->
+                                        <Button Content="VIEW ORDER" Tag="{Binding}"
+                                                Click="OnViewOrderClick"
+                                                Visibility="{Binding IsBoughtFromStock, Converter={StaticResource BoolToVis}}"
+                                                Style="{StaticResource Pos3DTableActionBtn}"
+                                                Margin="0,0,6,0"/>
+                                        <Button Content="RESET" Tag="{Binding}"
+                                                Click="OnResetItemToPendingClick"
+                                                Visibility="{Binding IsBoughtFromStock, Converter={StaticResource BoolToVis}}"
+                                                Style="{StaticResource Pos3DFilterBtn}"
+                                                ToolTip="Revert back to Pending and restore inventory quantity"/>
 
                                         <!-- When Purchased: [ VIEW ORDER ] and [ RECEIPT ] -->
                                         <Button Content="VIEW ORDER" Tag="{Binding}"

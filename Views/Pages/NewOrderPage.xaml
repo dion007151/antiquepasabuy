@@ -184,6 +184,10 @@
                             <TextBlock Text="Type store, item name, price, qty and press Enter to instantly add"
                                        FontSize="10.5" Foreground="{DynamicResource PosSecondaryText}"
                                        VerticalAlignment="Center"/>
+                            <TextBlock x:Name="QuickStockHint"
+                                       FontSize="11" FontWeight="Bold" Foreground="#0D9488"
+                                       VerticalAlignment="Center" Margin="10,0,0,0"
+                                       Visibility="Collapsed"/>
                         </StackPanel>
 
                         <!-- Hidden barcode scanner stub for code-behind -->
@@ -243,6 +247,7 @@
                                          FontSize="12" Foreground="{DynamicResource PosPrimaryText}"
                                          Height="36" VerticalContentAlignment="Center"
                                          md:HintAssist.Hint="Item name (e.g. 1kg Chicken, Milk...)"
+                                         TextChanged="OnQuickItemNameChanged"
                                          KeyDown="OnQuickItemKeyDown"/>
                             </Grid>
                         </Border>
@@ -396,13 +401,20 @@
                                             </Grid>
                                         </Border>
 
-                                        <!-- Product Title -->
-                                        <TextBlock Grid.Row="1" Text="{Binding Name}"
-                                                   FontWeight="SemiBold" FontSize="12"
-                                                   Foreground="{DynamicResource PosPrimaryText}"
-                                                   TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
-                                                   MaxHeight="34" LineHeight="16"
-                                                   VerticalAlignment="Top" Margin="2,0,2,0"/>
+                                        <!-- Product Title & Stock -->
+                                        <StackPanel Grid.Row="1" Margin="2,0,2,0">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontWeight="SemiBold" FontSize="12"
+                                                       Foreground="{DynamicResource PosPrimaryText}"
+                                                       TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                                                       MaxHeight="34" LineHeight="16"
+                                                       VerticalAlignment="Top"/>
+                                            <TextBlock Text="{Binding StockDisplay}"
+                                                       FontSize="10" FontWeight="Bold"
+                                                       Foreground="#0D9488"
+                                                       Visibility="{Binding IsStockItem, Converter={StaticResource BoolToVis}}"
+                                                       Margin="0,2,0,0"/>
+                                        </StackPanel>
 
                                         <!-- Price & Add Pill Tag -->
                                         <Grid Grid.Row="2" VerticalAlignment="Bottom" Margin="2,4,2,0">
@@ -641,10 +653,17 @@
 
                                                     <!-- Item name + store + qty×unit + price -->
                                                     <StackPanel Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding Name}"
-                                                                   FontWeight="Bold" FontSize="12"
-                                                                   Foreground="{DynamicResource PosPrimaryText}"
-                                                                   TextTrimming="CharacterEllipsis"/>
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="{Binding Name}"
+                                                                       FontWeight="Bold" FontSize="12"
+                                                                       Foreground="{DynamicResource PosPrimaryText}"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                            <TextBlock Text="{Binding StockOnHandDisplay, StringFormat=' ({0})'}"
+                                                                       FontSize="10.5" FontWeight="SemiBold"
+                                                                       Foreground="#0D9488"
+                                                                       Visibility="{Binding IsStockItem, Converter={StaticResource BoolToVis}}"
+                                                                       VerticalAlignment="Center" Margin="4,0,0,0"/>
+                                                        </StackPanel>
                                                         <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                                                             <!-- Store badge -->
                                                             <Border Background="{DynamicResource PosLightBlue}"
@@ -663,6 +682,15 @@
                                                                        Foreground="{DynamicResource PosSecondaryText}"
                                                                        VerticalAlignment="Center"/>
                                                         </StackPanel>
+                                                        <!-- Soft Stock Warning if Qty > On Hand -->
+                                                        <Border Visibility="{Binding HasStockWarning, Converter={StaticResource BoolToVis}}"
+                                                                Background="#FFFBEB" BorderBrush="#F59E0B" BorderThickness="1"
+                                                                CornerRadius="4" Padding="5,2" Margin="0,3,0,0">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <md:PackIcon Kind="AlertOutline" Width="12" Height="12" Foreground="#D97706" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                                <TextBlock Text="{Binding StockWarningText}" FontSize="9.5" FontWeight="SemiBold" Foreground="#B45309" VerticalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </Border>
                                                     </StackPanel>
 
                                                     <!-- Qty stepper: [−] n [+] (Touch Friendly) -->
