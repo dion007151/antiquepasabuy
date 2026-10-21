@@ -92,6 +92,26 @@
                     </StackPanel>
                 </Grid>
 
+                <!-- STOCK ITEM SETTINGS -->
+                <Border BorderBrush="{DynamicResource PosBorder}" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,0,0,10" Background="{DynamicResource PosPanel}">
+                    <StackPanel>
+                        <CheckBox x:Name="IsStockItemBox" Content="Stock item (inventory held on hand / replaces excess list)"
+                                  FontWeight="Bold" FontSize="11.5" Foreground="{DynamicResource PosPrimaryText}"
+                                  Click="OnStockItemToggled"/>
+
+                        <StackPanel x:Name="StockQuantityPanel" Visibility="Collapsed" Margin="0,8,0,2">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <TextBlock Text="Quantity on hand *" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource PosSecondaryText}" FontFamily="Segoe UI"/>
+                                <TextBlock Text=" (Decimals allowed, e.g. 10 or 2.5)" FontSize="10.5" Foreground="{DynamicResource PosMutedText}" FontFamily="Segoe UI"/>
+                            </StackPanel>
+                            <TextBox x:Name="StockQuantityBox" Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     md:HintAssist.Hint="0" FontSize="12.5" Padding="8,6" Text="0" Width="180" HorizontalAlignment="Left"/>
+                            <TextBlock Text="Cost Price below is required for stock items to calculate inventory value."
+                                       FontSize="10.5" Foreground="#DC2626" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
                 <!-- PRICE FIELDS (Original / Cost Price Optional + Now / Selling Price) -->
                 <Grid Margin="0,0,0,10">
                     <Grid.ColumnDefinitions>
@@ -102,7 +122,7 @@
                         <ColumnDefinition Width="0.9*"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="Original / Cost (₱)" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource PosSecondaryText}" Margin="0,0,0,4" FontFamily="Segoe UI"/>
+                        <TextBlock x:Name="CostPriceLabel" Text="Original / Cost (₱)" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource PosSecondaryText}" Margin="0,0,0,4" FontFamily="Segoe UI"/>
                         <TextBox x:Name="CostPriceBox" Style="{StaticResource MaterialDesignOutlinedTextBox}" md:HintAssist.Hint="Optional cost" FontSize="12.5" Padding="8,6"
                                  ToolTip="Original purchase price at store / wholesale cost"/>
                     </StackPanel>

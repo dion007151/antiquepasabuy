@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Microsoft.Win32;
 using AntiquePasabuyPOS.Data;
@@ -35,6 +36,11 @@ public partial class ProductDialog : Window
             CostPriceBox.Text = existing.CostPrice.HasValue ? existing.CostPrice.Value.ToString("N2") : "";
             PriceBox.Text = existing.Price.ToString("N2");
             UnitBox.Text = existing.Unit;
+
+            // Load Stock Item setting
+            IsStockItemBox.IsChecked = existing.IsStockItem;
+            StockQuantityBox.Text = existing.StockQuantity.ToString("G");
+            UpdateStockUiState(existing.IsStockItem);
 
             // Load Pasabuy Fee setting
             if (existing.FeeType == ProductFeeType.MANUAL)
@@ -173,6 +179,27 @@ public partial class ProductDialog : Window
             feeType = ProductFeeType.NONE;
         }
 
+        // Stock Item validation
+        var isStock = IsStockItemBox.IsChecked == true;
+        double stockQty = 0;
+        if (isStock)
+        {
+            if (!double.TryParse(StockQuantityBox.Text.Trim(), out var parsedStock) || parsedStock < 0)
+            {
+                ErrLbl.Text = "Please enter a valid on-hand stock quantity (0 or greater).";
+                StockQuantityBox.Focus();
+                return;
+            }
+            stockQty = parsedStock;
+
+            if (!costPrice.HasValue || costPrice.Value <= 0)
+            {
+                ErrLbl.Text = "Cost price is required for stock items to calculate inventory value.";
+                CostPriceBox.Focus();
+                return;
+            }
+        }
+
         if (_existing is null)
         {
             var newProd = new Product
@@ -185,6 +212,9 @@ public partial class ProductDialog : Window
                 Price = price,
                 Unit = unitName,
                 IsActive = true,
+                IsStockItem = isStock,
+                StockQuantity = isStock ? stockQty : 0,
+                OpeningStock = isStock ? stockQty : 0,
                 FeeType = feeType,
                 ManualFeeAmount = manualFee,
                 IsFeeExempt = feeType == ProductFeeType.NONE,
@@ -192,6 +222,16 @@ public partial class ProductDialog : Window
             };
             _db.Products.Add(newProd);
             _db.SaveChanges(); // Generates Id
+
+            if (isStock && stockQty > 0)
+            {
+                try
+                {
+                    var stockSvc = new StockService(_db);
+                    stockSvc.AddStock(newProd.Id, stockQty, "Initial stock");
+                }
+                catch { }
+            }
 
             if (!string.IsNullOrWhiteSpace(_pendingSourceImagePath))
             {
@@ -205,6 +245,7 @@ public partial class ProductDialog : Window
         }
         else
         {
+            var oldStockQty = _existing.StockQuantity;
             _existing.Name = NameBox.Text.Trim();
             _existing.Barcode = barcodeVal;
             _existing.Category = categoryName;
@@ -212,9 +253,21 @@ public partial class ProductDialog : Window
             _existing.CostPrice = costPrice;
             _existing.Price = price;
             _existing.Unit = unitName;
+            _existing.IsStockItem = isStock;
+            _existing.StockQuantity = isStock ? stockQty : 0;
             _existing.FeeType = feeType;
             _existing.ManualFeeAmount = manualFee;
             _existing.IsFeeExempt = feeType == ProductFeeType.NONE;
+
+            if (isStock && Math.Abs(stockQty - oldStockQty) > 0.0001)
+            {
+                try
+                {
+                    var stockSvc = new StockService(_db);
+                    stockSvc.AdjustStock(_existing.Id, stockQty, "Updated in Product Dialog");
+                }
+                catch { }
+            }
 
             if (_imageWasRemoved)
             {
@@ -282,6 +335,25 @@ public partial class ProductDialog : Window
     {
         if (ManualFeePanel == null) return;
         ManualFeePanel.Visibility = (ManualFeeRadio.IsChecked == true) ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void OnStockItemToggled(object sender, RoutedEventArgs e)
+    {
+        UpdateStockUiState(IsStockItemBox.IsChecked == true);
+    }
+
+    private void UpdateStockUiState(bool isStock)
+    {
+        if (StockQuantityPanel != null)
+            StockQuantityPanel.Visibility = isStock ? Visibility.Visible : Visibility.Collapsed;
+
+        if (CostPriceLabel != null)
+        {
+            CostPriceLabel.Text = isStock ? "Cost Price (₱) * (Required)" : "Original / Cost (₱)";
+            CostPriceLabel.Foreground = isStock
+                ? new SolidColorBrush(Color.FromRgb(220, 38, 38))
+                : (Brush)FindResource("PosSecondaryText");
+        }
     }
 }
 

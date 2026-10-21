@@ -1,0 +1,110 @@
+<Window x:Class="AntiquePasabuyPOS.Views.Dialogs.StockHistoryDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Stock Movement History"
+        Width="580" Height="460"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource PosBackground}"
+        Foreground="{DynamicResource PosPrimaryText}">
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Header -->
+            <RowDefinition Height="*"/>    <!-- DataGrid -->
+            <RowDefinition Height="Auto"/> <!-- Close Button -->
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0" Margin="0,0,0,14">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Background="#EDE9FE" CornerRadius="8" Padding="7" Margin="0,0,10,0" VerticalAlignment="Center">
+                    <md:PackIcon Kind="History" Width="20" Height="20" Foreground="#7C3AED"/>
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Stock Movement History" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource PosPrimaryText}"/>
+                    <TextBlock x:Name="ProductSubtitle" Text="Product Name" FontSize="11.5" Foreground="{DynamicResource PosSecondaryText}" TextTrimming="CharacterEllipsis" MaxWidth="360"/>
+                </StackPanel>
+            </StackPanel>
+            <Border HorizontalAlignment="Right" VerticalAlignment="Center" Background="{DynamicResource PosSurface}"
+                    BorderBrush="{DynamicResource PosBorder}" BorderThickness="1" CornerRadius="6" Padding="10,5">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Current Stock: " FontSize="11.5" Foreground="{DynamicResource PosSecondaryText}"/>
+                    <TextBlock x:Name="CurrentStockLabel" Text="0 pc" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource PosPrimary}"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Movements List -->
+        <Border Grid.Row="1" Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}"
+                BorderThickness="1" CornerRadius="8" Margin="0,0,0,14">
+            <Grid>
+                <DataGrid x:Name="MovementsGrid"
+                          AutoGenerateColumns="False" IsReadOnly="True"
+                          CanUserAddRows="False" CanUserDeleteRows="False"
+                          Style="{StaticResource MaterialDesignDataGrid}"
+                          HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                          RowBackground="Transparent"
+                          FontFamily="Segoe UI" FontSize="12">
+                    <DataGrid.ColumnHeaderStyle>
+                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource MaterialDesignDataGridColumnHeader}">
+                            <Setter Property="Padding" Value="8,6"/>
+                            <Setter Property="FontSize" Value="11"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter Property="Foreground" Value="{DynamicResource PosSecondaryText}"/>
+                        </Style>
+                    </DataGrid.ColumnHeaderStyle>
+                    <DataGrid.Columns>
+                        <!-- Date & Time -->
+                        <DataGridTextColumn Header="Date / Time" Binding="{Binding Timestamp, StringFormat='MMM dd, yyyy  hh:mm tt'}" Width="150">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="FontSize" Value="11"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <!-- Change Qty -->
+                        <DataGridTemplateColumn Header="Change" Width="85">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding FormattedChange}" FontWeight="Bold" FontSize="12"
+                                               Foreground="{Binding ChangeColor}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Balance After -->
+                        <DataGridTextColumn Header="Balance" Binding="{Binding NewQuantity, StringFormat='{}{0:G}'}" Width="80">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                    <Setter Property="HorizontalAlignment" Value="Right"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <!-- Note / Reference -->
+                        <DataGridTextColumn Header="Reason / Reference" Binding="{Binding Note}" Width="*">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="FontSize" Value="11.5"/>
+                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <TextBlock x:Name="EmptyMsg" Text="No stock movements recorded yet."
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Foreground="{DynamicResource PosMutedText}" FontSize="12" Visibility="Collapsed"/>
+            </Grid>
+        </Border>
+
+        <!-- Close -->
+        <Button Grid.Row="2" Content="Close" Style="{StaticResource Pos3DSecondaryBtn}" HorizontalAlignment="Right" Click="OnClose"/>
+    </Grid>
+</Window>

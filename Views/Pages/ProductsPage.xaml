@@ -30,6 +30,16 @@
 
             <!-- TOP ACTIONS -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <!-- TOTAL STOCK VALUE BANNER -->
+                <Border Background="#ECFDF5" BorderBrush="#10B981" BorderThickness="1"
+                        CornerRadius="8" Padding="12,6" Margin="0,0,10,0" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <md:PackIcon Kind="Warehouse" Width="16" Height="16" Foreground="#059669" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="Total Stock Value: " FontSize="11.5" FontWeight="SemiBold" Foreground="#065F46" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="TotalStockValueLabel" Text="₱0.00" FontSize="13" FontWeight="Bold" Foreground="#059669" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
                 <Button Style="{StaticResource Pos3DFilterBtn}"
                         Click="OnScanBarcode" Height="38" Padding="14,0" Margin="0,0,8,0"
                         ToolTip="Scan product barcode with webcam or scanner gun (Shortcut: F2)">
@@ -60,11 +70,11 @@
 
                 <!-- Status Filter Buttons -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,14,0">
-                    <Button x:Name="FilterAllBtn"      Content="All"             Click="OnFilterClick" Tag="all"      Style="{StaticResource Pos3DFilterBtn}" Margin="0,0,4,0"/>
-                    <Button x:Name="FilterActiveBtn"   Content="Active"          Click="OnFilterClick" Tag="active"   Style="{StaticResource Pos3DFilterBtn}" Margin="0,0,4,0"/>
-                    <Button x:Name="FilterInactiveBtn" Content="Inactive"        Click="OnFilterClick" Tag="inactive" Style="{StaticResource Pos3DFilterBtn}" Margin="0,0,4,0"/>
-                    <Button x:Name="FilterWithFeeBtn"  Content="With Pasabuy Fee" Click="OnFilterClick" Tag="withfee"  Style="{StaticResource Pos3DFilterBtn}" Margin="0,0,4,0"/>
-                    <Button x:Name="FilterNoFeeBtn"    Content="No Fee"          Click="OnFilterClick" Tag="nofee"    Style="{StaticResource Pos3DFilterBtn}"/>
+                    <Button x:Name="FilterAllBtn"        Content="ALL"             Click="OnFilterClick" Tag="all"        Style="{StaticResource Pos3DFilterBtn}" Margin="0,0,4,0"/>
+                    <Button x:Name="FilterStockItemsBtn" Content="STOCK ITEMS"    Click="OnFilterClick" Tag="stock"      Style="{StaticResource Pos3DFilterBtn}" Margin="0,0,4,0"/>
+                    <Button x:Name="FilterOutOfStockBtn" Content="OUT OF STOCK"   Click="OnFilterClick" Tag="outofstock" Style="{StaticResource Pos3DFilterBtn}" Margin="0,0,4,0"/>
+                    <Button x:Name="FilterActiveBtn"     Content="ACTIVE"         Click="OnFilterClick" Tag="active"     Style="{StaticResource Pos3DFilterBtn}" Margin="0,0,4,0"/>
+                    <Button x:Name="FilterWithFeeBtn"    Content="WITH PASABUY FEE" Click="OnFilterClick" Tag="withfee"  Style="{StaticResource Pos3DFilterBtn}"/>
                 </StackPanel>
 
                 <!-- Search box -->
@@ -260,6 +270,31 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
 
+                    <!-- Stock (shown only for stock items) -->
+                    <DataGridTemplateColumn Header="Stock" Width="110" SortMemberPath="StockQuantity">
+                        <DataGridTemplateColumn.HeaderStyle>
+                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource MaterialDesignDataGridColumnHeader}">
+                                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                            </Style>
+                        </DataGridTemplateColumn.HeaderStyle>
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Border CornerRadius="6" Padding="8,3"
+                                            Background="{Binding StockBadgeBackground}"
+                                            Visibility="{Binding IsStockItemVisibility}">
+                                        <TextBlock Text="{Binding StockDisplayText}"
+                                                   FontSize="10.5" FontWeight="Bold" HorizontalAlignment="Center"
+                                                   Foreground="{Binding StockBadgeForeground}"/>
+                                    </Border>
+                                    <TextBlock Text="&#x2014;" Foreground="{DynamicResource PosMutedText}"
+                                               FontSize="11" HorizontalAlignment="Center"
+                                               Visibility="{Binding NonStockItemVisibility}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
                     <!-- Status -->
                     <DataGridTemplateColumn Header="Status" Width="105">
                         <DataGridTemplateColumn.HeaderStyle>
@@ -294,6 +329,25 @@
                                             ToolTip="More Actions">
                                         <Button.ContextMenu>
                                             <ContextMenu>
+                                                <MenuItem Header="Add Stock..." Click="OnAddStockClick"
+                                                          IsEnabled="{Binding IsStockItem}">
+                                                    <MenuItem.Icon>
+                                                        <md:PackIcon Kind="PlusCircleOutline" Width="16" Height="16" Foreground="#10B981"/>
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                                <MenuItem Header="Adjust Stock..." Click="OnAdjustStockClick"
+                                                          IsEnabled="{Binding IsStockItem}">
+                                                    <MenuItem.Icon>
+                                                        <md:PackIcon Kind="TuneVertical" Width="16" Height="16" Foreground="#3B82F6"/>
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                                <MenuItem Header="Stock History..." Click="OnStockHistoryClick"
+                                                          IsEnabled="{Binding IsStockItem}">
+                                                    <MenuItem.Icon>
+                                                        <md:PackIcon Kind="History" Width="16" Height="16" Foreground="#8B5CF6"/>
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                                <Separator/>
                                                 <MenuItem Header="Toggle Active / Inactive" Click="OnToggleActive">
                                                     <MenuItem.Icon>
                                                         <md:PackIcon Kind="ToggleSwitchOutline" Width="16" Height="16" Foreground="#059669"/>

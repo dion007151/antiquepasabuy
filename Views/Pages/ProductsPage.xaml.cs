@@ -62,6 +62,24 @@ public class ProductRowVm : INotifyPropertyChanged
         _ => new SolidColorBrush(Color.FromRgb(5, 150, 105)) // Emerald
     };
 
+    // ── Stock Tracking (Phase 3B) ──────────────────────────────────────────
+    public bool IsStockItem => Product.IsStockItem;
+    public double StockQuantity => Product.StockQuantity;
+    public Visibility IsStockItemVisibility => Product.IsStockItem ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility NonStockItemVisibility => Product.IsStockItem ? Visibility.Collapsed : Visibility.Visible;
+
+    public string StockDisplayText => Product.StockQuantity <= 0
+        ? "0 (Out of stock)"
+        : $"{Product.StockQuantity:G} {Unit}";
+
+    public Brush StockBadgeBackground => Product.StockQuantity <= 0
+        ? new SolidColorBrush(Color.FromRgb(254, 226, 226))  // Light red (#FEE2E2)
+        : new SolidColorBrush(Color.FromRgb(220, 252, 231)); // Light green (#DCFCE7)
+
+    public Brush StockBadgeForeground => Product.StockQuantity <= 0
+        ? new SolidColorBrush(Color.FromRgb(220, 38, 38))   // Red (#DC2626)
+        : new SolidColorBrush(Color.FromRgb(22, 101, 52));  // Dark green (#166534)
+
     public string? ImagePath => Product.ImagePath;
 
     private ImageSource? _thumbnail;
@@ -161,17 +179,25 @@ public partial class ProductsPage : Page
 
     private void UpdateFilterCounts()
     {
-        var total   = _all.Count;
-        var active  = _all.Count(p => p.IsActive);
-        var inactive = _all.Count(p => !p.IsActive);
-        var withFee = _all.Count(p => p.FeeType != ProductFeeType.NONE);
-        var noFee   = _all.Count(p => p.FeeType == ProductFeeType.NONE);
+        var total      = _all.Count;
+        var stockItems = _all.Count(p => p.IsStockItem);
+        var outOfStock = _all.Count(p => p.IsStockItem && p.StockQuantity <= 0);
+        var active     = _all.Count(p => p.IsActive);
+        var withFee    = _all.Count(p => p.FeeType != ProductFeeType.NONE);
 
-        FilterAllBtn.Content      = $"ALL ({total})";
-        FilterActiveBtn.Content   = $"ACTIVE ({active})";
-        FilterInactiveBtn.Content = $"INACTIVE ({inactive})";
-        FilterWithFeeBtn.Content  = $"WITH PASABUY FEE ({withFee})";
-        FilterNoFeeBtn.Content    = $"NO PASABUY FEE ({noFee})";
+        if (FilterAllBtn != null)        FilterAllBtn.Content        = $"ALL ({total})";
+        if (FilterStockItemsBtn != null) FilterStockItemsBtn.Content = $"STOCK ITEMS ({stockItems})";
+        if (FilterOutOfStockBtn != null) FilterOutOfStockBtn.Content = $"OUT OF STOCK ({outOfStock})";
+        if (FilterActiveBtn != null)     FilterActiveBtn.Content     = $"ACTIVE ({active})";
+        if (FilterWithFeeBtn != null)    FilterWithFeeBtn.Content    = $"WITH PASABUY FEE ({withFee})";
+
+        // Total stock value (Quantity x CostPrice for all active stock items)
+        if (TotalStockValueLabel != null)
+        {
+            var stockSvc = new StockService(_db);
+            var totalVal = stockSvc.GetTotalStockValue();
+            TotalStockValueLabel.Text = $"₱{totalVal:N2}";
+        }
     }
 
     private void OnFilterClick(object sender, RoutedEventArgs e)
@@ -181,18 +207,19 @@ public partial class ProductsPage : Page
             _activeFilter = tag.ToLower();
 
             // Update button styles
-            SetButtonStyle(FilterAllBtn,      _activeFilter == "all");
-            SetButtonStyle(FilterActiveBtn,   _activeFilter == "active");
-            SetButtonStyle(FilterInactiveBtn, _activeFilter == "inactive");
-            SetButtonStyle(FilterWithFeeBtn,  _activeFilter == "withfee");
-            SetButtonStyle(FilterNoFeeBtn,    _activeFilter == "nofee");
+            SetButtonStyle(FilterAllBtn,        _activeFilter == "all");
+            SetButtonStyle(FilterStockItemsBtn, _activeFilter == "stock");
+            SetButtonStyle(FilterOutOfStockBtn, _activeFilter == "outofstock");
+            SetButtonStyle(FilterActiveBtn,     _activeFilter == "active");
+            SetButtonStyle(FilterWithFeeBtn,    _activeFilter == "withfee");
 
             ApplyFilter();
         }
     }
 
-    private void SetButtonStyle(Button btn, bool isActive)
+    private void SetButtonStyle(Button? btn, bool isActive)
     {
+        if (btn == null) return;
         NavProps.SetIsActive(btn, isActive);
         btn.Foreground = isActive ? Brushes.White : new SolidColorBrush(Color.FromRgb(71, 85, 105));
     }
@@ -206,11 +233,11 @@ public partial class ProductsPage : Page
 
         filtered = _activeFilter switch
         {
-            "active"   => filtered.Where(p => p.IsActive),
-            "inactive" => filtered.Where(p => !p.IsActive),
-            "withfee"  => filtered.Where(p => p.FeeType != ProductFeeType.NONE),
-            "nofee"    => filtered.Where(p => p.FeeType == ProductFeeType.NONE),
-            _          => filtered
+            "stock"      => filtered.Where(p => p.IsStockItem),
+            "outofstock" => filtered.Where(p => p.IsStockItem && p.StockQuantity <= 0),
+            "active"     => filtered.Where(p => p.IsActive),
+            "withfee"    => filtered.Where(p => p.FeeType != ProductFeeType.NONE),
+            _            => filtered
         };
 
         if (!string.IsNullOrEmpty(t))
@@ -441,5 +468,49 @@ public partial class ProductsPage : Page
             ProductImageService.DeleteProductImage(imgPath);
             LoadData();
         }
+    }
+
+    // ── Stock Movement Context Menu Handlers ─────────────────────────────────
+
+    private void OnAddStockClick(object sender, RoutedEventArgs e)
+    {
+        var p = GetProductFromSender(sender);
+        if (p is null) return;
+
+        var dlg = new Dialogs.AddStockDialog(_db, p)
+        {
+            Owner = Window.GetWindow(this)
+        };
+        if (dlg.ShowDialog() == true)
+        {
+            LoadData();
+        }
+    }
+
+    private void OnAdjustStockClick(object sender, RoutedEventArgs e)
+    {
+        var p = GetProductFromSender(sender);
+        if (p is null) return;
+
+        var dlg = new Dialogs.AdjustStockDialog(_db, p)
+        {
+            Owner = Window.GetWindow(this)
+        };
+        if (dlg.ShowDialog() == true)
+        {
+            LoadData();
+        }
+    }
+
+    private void OnStockHistoryClick(object sender, RoutedEventArgs e)
+    {
+        var p = GetProductFromSender(sender);
+        if (p is null) return;
+
+        var dlg = new Dialogs.StockHistoryDialog(_db, p)
+        {
+            Owner = Window.GetWindow(this)
+        };
+        dlg.ShowDialog();
     }
 }

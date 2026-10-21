@@ -1,0 +1,55 @@
+<Window x:Class="AntiquePasabuyPOS.Views.Dialogs.AddStockDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Add Stock"
+        Width="380" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{DynamicResource PosBackground}"
+        Foreground="{DynamicResource PosPrimaryText}">
+    <Border Padding="20">
+        <StackPanel>
+            <!-- Header -->
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                <Border Background="#D1FAE5" CornerRadius="8" Padding="7" Margin="0,0,10,0" VerticalAlignment="Center">
+                    <md:PackIcon Kind="PlusCircleOutline" Width="20" Height="20" Foreground="#059669"/>
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Add Stock" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource PosPrimaryText}"/>
+                    <TextBlock x:Name="ProductSubtitle" Text="Product Name" FontSize="11.5" Foreground="{DynamicResource PosSecondaryText}" TextTrimming="CharacterEllipsis" MaxWidth="280"/>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Current Stock Info -->
+            <Border Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,0,14">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Current on-hand stock:" FontSize="12" Foreground="{DynamicResource PosSecondaryText}" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="CurrentStockLabel" Grid.Column="1" Text="0 pc" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource PosPrimaryText}" VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+
+            <!-- Quantity to Add -->
+            <TextBlock Text="Quantity to add *" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource PosSecondaryText}" Margin="0,0,0,4"/>
+            <TextBox x:Name="QuantityBox" Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                     md:HintAssist.Hint="e.g. 10 or 2.5" FontSize="13" Padding="10,8" Margin="0,0,0,12"/>
+
+            <!-- Note (optional) -->
+            <TextBlock Text="Note / Reference (optional)" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource PosSecondaryText}" Margin="0,0,0,4"/>
+            <TextBox x:Name="NoteBox" Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                     md:HintAssist.Hint="e.g. New delivery, replenishment" Text="Added" FontSize="12.5" Padding="10,8" Margin="0,0,0,14"/>
+
+            <TextBlock x:Name="ErrLabel" Foreground="#DC2626" FontSize="11" Margin="0,0,0,8" Visibility="Collapsed"/>
+
+            <!-- Buttons -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Cancel" Style="{StaticResource Pos3DSecondaryBtn}" Click="OnCancel" Margin="0,0,8,0"/>
+                <Button Content="Confirm Add" Style="{StaticResource Pos3DPrimaryBtn}" Click="OnConfirm"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>
