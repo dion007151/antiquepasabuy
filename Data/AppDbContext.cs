@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<Setting>   Settings   => Set<Setting>();
     public DbSet<AuditLog>  AuditLogs  => Set<AuditLog>();
     public DbSet<Masterlist> Masterlists => Set<Masterlist>();
+    public DbSet<StockMovement> StockMovements => Set<StockMovement>();
 
     // ── Angelito's Bar & Resto Grill DbSets ────────────────────────────────
     public DbSet<RestoTable>         RestoTables         => Set<RestoTable>();
@@ -596,6 +597,19 @@ public class AppDbContext : DbContext
                         Subtotal REAL NOT NULL DEFAULT 0,
                         Notes TEXT NULL,
                         FOREIGN KEY (RestoSaleId) REFERENCES RestoSales(Id) ON DELETE CASCADE
+                    );
+
+                    -- Phase 3B: Stock Movements table
+                    CREATE TABLE IF NOT EXISTS StockMovements (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ProductId INTEGER NOT NULL,
+                        Timestamp TEXT NOT NULL,
+                        ChangeQty REAL NOT NULL,
+                        NewQuantity REAL NOT NULL,
+                        Note TEXT NOT NULL,
+                        OrderItemId INTEGER NULL,
+                        FOREIGN KEY (ProductId) REFERENCES Products(Id) ON DELETE CASCADE,
+                        FOREIGN KEY (OrderItemId) REFERENCES OrderItems(Id) ON DELETE SET NULL
                     );
                 ";
                 try { cmd.ExecuteNonQuery(); } catch { }
