@@ -474,10 +474,13 @@ public static class PrinterService
 
     public static string FormatPaymentStatus(Order order, decimal estimatedTotal)
     {
-        if (order.TotalPaid >= estimatedTotal && order.TotalPaid > 0) return "Paid";
-        if (order.TotalPaid > 0) return "Partly Paid";
-        if (order.IsCOD) return "COD (Pending)";
-        return "Not Paid";
+        var status = Calc.PaymentStatus(estimatedTotal, Calc.TotalPaid(order.Payments));
+        return status switch
+        {
+            Models.PaymentStatus.PAID    => "Paid",
+            Models.PaymentStatus.PARTIAL => order.IsCOD ? "COD (Pending)" : "Partly Paid",
+            _                            => order.IsCOD ? "COD (Pending)" : "Not Paid"
+        };
     }
 
     public static string FormatFulfillmentStatus(Order order)
@@ -593,7 +596,10 @@ public static class PrinterService
         decimal purchaseBudget = order.ItemsSubtotal;
         decimal pasabuyFee = order.PasabuyFee;
         decimal discount = order.Discount;
-        decimal estimatedTotal = Math.Max(0m, purchaseBudget + pasabuyFee - discount);
+        decimal estimatedTotal = Math.Max(0m, Calc.OrderTotal(purchaseBudget, pasabuyFee) - discount);
+        decimal totalPaidOnReceipt = Calc.TotalPaid(order.Payments);
+        decimal balanceDueOnReceipt = Calc.BalanceDue(estimatedTotal, totalPaidOnReceipt);
+        decimal overpaidOnReceipt = Calc.OverpaidAmount(estimatedTotal, totalPaidOnReceipt);
 
         sb.AppendLine(Line('-'));
         sb.AppendLine(TwoCol("PURCHASE BUDGET:", $"₱{purchaseBudget:N2}"));
@@ -625,17 +631,20 @@ public static class PrinterService
         sb.AppendLine(TwoCol("PAYMENT STATUS:", payStatus));
 
         var lastPayment = order.Payments?.OrderByDescending(p => p.PaymentDate ?? p.CreatedAt).FirstOrDefault();
-        if (payStatus != "UNPAID")
+        if (payStatus != "UNPAID" && payStatus != "Not Paid" && payStatus != "COD (Pending)")
         {
             if (lastPayment != null)
             {
                 sb.AppendLine(TwoCol("PAYMENT METHOD:", FormatPaymentMethod(lastPayment.Method)));
             }
-            sb.AppendLine(TwoCol("AMOUNT PAID:", $"₱{order.TotalPaid:N2}"));
-            if (payStatus == "PARTIAL")
+            sb.AppendLine(TwoCol("AMOUNT PAID:", $"₱{totalPaidOnReceipt:N2}"));
+            if (overpaidOnReceipt > 0)
             {
-                var bal = Math.Max(0m, estimatedTotal - order.TotalPaid);
-                sb.AppendLine(TwoCol("BALANCE DUE:", $"₱{bal:N2}"));
+                sb.AppendLine(TwoCol("OVERPAID:", $"₱{overpaidOnReceipt:N2}"));
+            }
+            if (payStatus == "Partly Paid")
+            {
+                sb.AppendLine(TwoCol("BALANCE DUE:", $"₱{balanceDueOnReceipt:N2}"));
             }
             var payDate = lastPayment?.PaymentDate ?? lastPayment?.CreatedAt;
             if (payDate.HasValue)
