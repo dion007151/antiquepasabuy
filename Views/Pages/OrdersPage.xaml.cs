@@ -103,10 +103,10 @@ public class OrderRowVm : INotifyPropertyChanged
     public string Store => IsGroup
         ? string.Join(", ", GroupedOrders.Select(o => o.PreferredStore).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct())
         : (Order.PreferredStore ?? "Robinsons Antique");
-    public decimal ServiceFee => IsGroup
-        ? GroupedOrders.Sum(o => o.ServiceFee)
-        : Order.ServiceFee;
-    public decimal PasabuyFee => ServiceFee;
+    public decimal PasabuyFee => IsGroup
+        ? GroupedOrders.Sum(o => o.PasabuyFee)
+        : Order.PasabuyFee;
+    public decimal ServiceFee => PasabuyFee;
     public decimal EstimatedTotal => IsGroup
         ? GroupedOrders.Sum(o => o.EstimatedItemsTotal)
         : Order.EstimatedItemsTotal;
