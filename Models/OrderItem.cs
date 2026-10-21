@@ -17,7 +17,14 @@ public class OrderItem
     public string Store { get; set; } = "General"; // SM, Robinsons, Grocery, Pharmacy, etc.
     public ItemSource Source { get; set; } = ItemSource.STORE; // STORE (Bought at store) vs STOCK (from shop inventory)
     public decimal? CostPrice { get; set; } // Actual store purchase cost (matches S&R/SM in Excel)
-    public bool IsFeeExempt { get; set; } = false; // True for retail items with ₱0 Pasabuy Fee
+    public bool IsFeeExempt { get; set; } = false; // kept for backward-compat; superseded by FeeType snapshot
+    /// <summary>
+    /// Fee type snapshot copied from the product when the item was added.
+    /// Changing a product's FeeType later does NOT affect existing order items.
+    /// </summary>
+    public ProductFeeType FeeType { get; set; } = ProductFeeType.STANDARD;
+    /// <summary>Flat fee per unit snapshot when FeeType == MANUAL. Null otherwise.</summary>
+    public decimal? ManualFeeAmount { get; set; }
     public double? PurchasedQty { get; set; }
     public DateTime? PurchaseDate { get; set; }
     public string? ReceiptNo { get; set; }

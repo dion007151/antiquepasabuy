@@ -110,6 +110,24 @@ public enum PaymentMethod
     Other
 }
 
+/// <summary>
+/// Determines how the Pasabuy service fee is calculated for a product / order item.
+/// STANDARD: item amount joins the tier subtotal; fee comes from the tier table.
+/// NONE: item adds nothing to fee subtotal (fee-exempt).
+/// MANUAL: fee = ManualFeeAmount x Qty, added flat on top of tier fee.
+/// </summary>
+public enum ProductFeeType
+{
+    STANDARD,
+    NONE,
+    MANUAL,
+
+    // Aliases for readability in code
+    Standard = STANDARD,
+    None     = NONE,
+    Manual   = MANUAL
+}
+
 public enum UserRole
 {
     Admin,

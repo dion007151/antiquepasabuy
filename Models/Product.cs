@@ -17,8 +17,17 @@ public class Product
     // ── Inventory Tracking (RING CAKE Excel workflow) ─────────────────────────
     /// <summary>Whether this product is kept in on-hand stock (STOCK item) vs bought to order (STORE item).</summary>
     public bool IsStockItem { get; set; } = false;
-    /// <summary>Whether this product is exempt from the Pasabuy Fee (e.g. SOLAR LIGHT NO PASABUY).</summary>
+    /// <summary>Whether this product is exempt from the Pasabuy Fee (kept for DB migration, superseded by FeeType).</summary>
+    [Obsolete("Use FeeType instead. IsFeeExempt is kept only for schema-migration reference.")]
     public bool IsFeeExempt { get; set; } = false;
+    /// <summary>
+    /// How the Pasabuy fee is applied to this product.
+    /// STANDARD = included in tier subtotal, NONE = no fee, MANUAL = flat fee per unit.
+    /// Defaults to STANDARD.
+    /// </summary>
+    public ProductFeeType FeeType { get; set; } = ProductFeeType.STANDARD;
+    /// <summary>Flat fee per unit when FeeType == MANUAL (e.g. ₱50 per item). Null otherwise.</summary>
+    public decimal? ManualFeeAmount { get; set; }
     /// <summary>Actual cost price from store/wholesale (maps to S&R/SM column in Excel).</summary>
     public decimal? CostPrice { get; set; }
     /// <summary>Opening inventory count at the start of the batch.</summary>

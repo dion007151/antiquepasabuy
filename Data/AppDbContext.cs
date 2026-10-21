@@ -86,6 +86,14 @@ public class AppDbContext : DbContext
             str => StringToItemStatus(str)
         );
         mb.Entity<OrderItem>().Property(i => i.Source).HasConversion<string>();
+        mb.Entity<OrderItem>().Property(i => i.FeeType).HasConversion(
+            f => f.ToString().ToUpperInvariant(),
+            s => ParseFeeType(s)
+        );
+        mb.Entity<Product>().Property(p => p.FeeType).HasConversion(
+            f => f.ToString().ToUpperInvariant(),
+            s => ParseFeeType(s)
+        );
         mb.Entity<Payment>().Property(p => p.Method).HasConversion<string>();
         mb.Entity<Delivery>().Property(d => d.Status).HasConversion<string>();
         mb.Entity<User>().Property(u => u.Role).HasConversion<string>();
@@ -146,6 +154,20 @@ public class AppDbContext : DbContext
         "CANCELLED"                                           => ItemStatus.CANCELLED,
         _ => Enum.TryParse<ItemStatus>(str ?? "", true, out var res) ? res : ItemStatus.PENDING
     };
+
+    /// <summary>
+    /// Converts a stored TEXT value back to ProductFeeType.
+    /// Used by EF HasConversion (expression trees cannot use out-var inline).
+    /// </summary>
+    public static ProductFeeType ParseFeeType(string? s)
+    {
+        return (s ?? "").Trim().ToUpperInvariant() switch
+        {
+            "NONE"     => ProductFeeType.NONE,
+            "MANUAL"   => ProductFeeType.MANUAL,
+            _          => ProductFeeType.STANDARD
+        };
+    }
 
     /// <summary>
     /// Backs up the database file to the backups folder prior to running any migration.
@@ -288,6 +310,14 @@ public class AppDbContext : DbContext
                 UPDATE Products SET Category = 'Groceries' WHERE LOWER(TRIM(Category)) IN ('groceries', 'grocery');
                 UPDATE Products SET Category = 'Fastfood' WHERE LOWER(TRIM(Category)) IN ('fast food', 'fastfood');
                 UPDATE Products SET Category = 'Drinks' WHERE LOWER(TRIM(Category)) IN ('drink', 'drinks', 'beverage', 'beverages');
+
+                -- 3A: Migrate IsFeeExempt -> FeeType on Products (only if still default)
+                UPDATE Products SET FeeType = 'NONE'     WHERE IsFeeExempt = 1 AND (FeeType IS NULL OR FeeType = '' OR FeeType = 'STANDARD');
+                UPDATE Products SET FeeType = 'STANDARD' WHERE IsFeeExempt = 0 AND (FeeType IS NULL OR FeeType = '');
+
+                -- 3A: Migrate IsFeeExempt -> FeeType on OrderItems (only if still default)
+                UPDATE OrderItems SET FeeType = 'NONE'     WHERE IsFeeExempt = 1 AND (FeeType IS NULL OR FeeType = '' OR FeeType = 'STANDARD');
+                UPDATE OrderItems SET FeeType = 'STANDARD' WHERE IsFeeExempt = 0 AND (FeeType IS NULL OR FeeType = '');
             ";
             cmd.ExecuteNonQuery();
         }
@@ -434,9 +464,16 @@ public class AppDbContext : DbContext
             AddColumnIfNotExists("OrderItems", "PurchaseNotes",   "TEXT NULL");
 
             // OrderItems (Phase 2 – source & cost tracking fields)
-            AddColumnIfNotExists("OrderItems", "Source",      "TEXT NOT NULL DEFAULT 'STORE'");
-            AddColumnIfNotExists("OrderItems", "CostPrice",   "REAL NULL");
-            AddColumnIfNotExists("OrderItems", "IsFeeExempt", "INTEGER NOT NULL DEFAULT 0");
+            AddColumnIfNotExists("OrderItems", "Source",            "TEXT NOT NULL DEFAULT 'STORE'");
+            AddColumnIfNotExists("OrderItems", "CostPrice",         "REAL NULL");
+            AddColumnIfNotExists("OrderItems", "IsFeeExempt",       "INTEGER NOT NULL DEFAULT 0");
+            // 3A: fee type snapshot on order items
+            AddColumnIfNotExists("OrderItems", "FeeType",           "TEXT NOT NULL DEFAULT 'STANDARD'");
+            AddColumnIfNotExists("OrderItems", "ManualFeeAmount",   "REAL NULL");
+
+            // 3A: fee type on products (replaces IsFeeExempt as primary field)
+            AddColumnIfNotExists("Products",   "FeeType",           "TEXT NOT NULL DEFAULT 'STANDARD'");
+            AddColumnIfNotExists("Products",   "ManualFeeAmount",   "REAL NULL");
 
             // Payments (payment recording info)
             AddColumnIfNotExists("Payments", "PaymentDate", "TEXT NULL");

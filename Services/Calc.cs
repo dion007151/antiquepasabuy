@@ -94,8 +94,9 @@ public static class Calc
     }
 
     /// <summary>
-    /// Computes the fee-bearing (taxable) subtotal.
-    /// Products with IsFeeExempt == true contribute nothing to this fee subtotal.
+    /// Computes the tier-fee subtotal: only STANDARD counted items contribute.
+    /// NONE items add nothing. MANUAL items are excluded (their fee is flat, not tier-based).
+    /// Falls back to !IsFeeExempt for legacy items where FeeType is still default.
     /// </summary>
     public static decimal FeeSubtotal(IEnumerable<OrderItem>? items)
     {
@@ -103,9 +104,31 @@ public static class Calc
         decimal sum = 0m;
         foreach (var item in items)
         {
-            if (IsCountedItem(item) && !item.IsFeeExempt)
+            if (!IsCountedItem(item)) continue;
+            // STANDARD items (or legacy IsFeeExempt=false) contribute to tier subtotal
+            if (item.FeeType == ProductFeeType.STANDARD && !item.IsFeeExempt)
             {
                 sum += ItemAmount(item);
+            }
+            // NONE and MANUAL items contribute nothing to the tier subtotal
+        }
+        return RoundMoney(sum);
+    }
+
+    /// <summary>
+    /// Computes the total flat manual fee: sum of ManualFeeAmount x Qty for counted MANUAL items.
+    /// Uses MidpointRounding.AwayFromZero per unit and rounds the total to 2 decimals.
+    /// </summary>
+    public static decimal ManualFeeTotal(IEnumerable<OrderItem>? items)
+    {
+        if (items is null) return 0m;
+        decimal sum = 0m;
+        foreach (var item in items)
+        {
+            if (!IsCountedItem(item)) continue;
+            if (item.FeeType == ProductFeeType.MANUAL && item.ManualFeeAmount.HasValue && item.ManualFeeAmount.Value > 0m)
+            {
+                sum += RoundMoney(item.ManualFeeAmount.Value * (decimal)item.Qty);
             }
         }
         return RoundMoney(sum);
@@ -218,8 +241,19 @@ public static class Calc
         string? overrideNote,
         out bool isAdjusted)
     {
-        var taxable = FeeSubtotal(items);
-        return PasabuyFee(taxable, feeTiers, manualOverride, overrideNote, out isAdjusted);
+        // Order-level manual override replaces the whole result
+        if (manualOverride.HasValue)
+        {
+            if (string.IsNullOrWhiteSpace(overrideNote))
+                throw new ArgumentException("A note is required when overriding the Pasabuy Fee.");
+            isAdjusted = true;
+            return RoundMoney(Math.Max(0m, manualOverride.Value));
+        }
+
+        isAdjusted = false;
+        var tierFee   = PasabuyFee(FeeSubtotal(items), feeTiers);
+        var manualFee = ManualFeeTotal(items);
+        return RoundMoney(tierFee + manualFee);
     }
 
     public static decimal PasabuyFee(
