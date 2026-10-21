@@ -1,3 +1,5 @@
+using AntiquePasabuyPOS.Services;
+
 namespace AntiquePasabuyPOS.Models;
 
 public class Order
@@ -24,7 +26,18 @@ public class Order
 
     // Official Pasabuy Fee (mapped directly to database ServiceFee field for zero data loss)
     public decimal ServiceFee { get; set; } = 50m;
-    public decimal PasabuyFee { get => ManualFeeOverride ?? ServiceFee; set => ServiceFee = value; }
+    public decimal PasabuyFee
+    {
+        get
+        {
+            if (Items == null)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Order {OrderNo}] Items collection is not loaded.");
+                throw new InvalidOperationException($"[Order {OrderNo}] Items collection must be loaded before accessing PasabuyFee.");
+            }
+            return Calc.PasabuyFee(this);
+        }
+    }
 
     // Manual Fee Override (Rule 3)
     public decimal? ManualFeeOverride { get; set; }
@@ -40,17 +53,70 @@ public class Order
     public ICollection<Payment> Payments { get; set; } = new List<Payment>();
     public Delivery? Delivery { get; set; }
 
-    public decimal ItemsSubtotal => Items?
-        .Where(i => i.Status != ItemStatus.UNAVAILABLE && i.Status != ItemStatus.CANCELLED && !string.IsNullOrWhiteSpace(i.ProductName) && i.ProductName.Trim() != "-")
-        .Sum(i => (i.ActualPrice ?? i.EstimatedPrice) * (decimal)i.Qty) ?? 0m;
-    public decimal GrandTotal => Math.Max(0m, ItemsSubtotal + ServiceFee + DeliveryFee - Discount);
-    public decimal TotalPaid => Payments?.Sum(p => p.Amount) ?? 0m;
-    public decimal Balance => Math.Max(0m, GrandTotal - TotalPaid);
+    public decimal ItemsSubtotal
+    {
+        get
+        {
+            if (Items == null)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Order {OrderNo}] Items collection is not loaded.");
+                throw new InvalidOperationException($"[Order {OrderNo}] Items collection must be loaded before accessing ItemsSubtotal.");
+            }
+            return Calc.OrderSubtotal(Items);
+        }
+    }
 
-    public PaymentStatus PaymentStatus =>
-        TotalPaid <= 0m ? PaymentStatus.UNPAID :
-        TotalPaid < GrandTotal ? PaymentStatus.PARTIAL :
-        PaymentStatus.PAID;
+    public decimal GrandTotal
+    {
+        get
+        {
+            if (Items == null)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Order {OrderNo}] Items collection is not loaded.");
+                throw new InvalidOperationException($"[Order {OrderNo}] Items collection must be loaded before accessing GrandTotal.");
+            }
+            return Calc.OrderTotal(this);
+        }
+    }
+
+    public decimal TotalPaid
+    {
+        get
+        {
+            if (Payments == null)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Order {OrderNo}] Payments collection is not loaded.");
+                throw new InvalidOperationException($"[Order {OrderNo}] Payments collection must be loaded before accessing TotalPaid.");
+            }
+            return Calc.TotalPaid(Payments);
+        }
+    }
+
+    public decimal Balance
+    {
+        get
+        {
+            if (Items == null || Payments == null)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Order {OrderNo}] Items or Payments collection is not loaded.");
+                throw new InvalidOperationException($"[Order {OrderNo}] Items and Payments collections must be loaded before accessing Balance.");
+            }
+            return Calc.BalanceDue(this);
+        }
+    }
+
+    public PaymentStatus PaymentStatus
+    {
+        get
+        {
+            if (Items == null || Payments == null)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Order {OrderNo}] Items or Payments collection is not loaded.");
+                throw new InvalidOperationException($"[Order {OrderNo}] Items and Payments collections must be loaded before accessing PaymentStatus.");
+            }
+            return Calc.PaymentStatus(this);
+        }
+    }
 
     public DateTime? PaidDate => Payments != null && Payments.Any(p => p.Amount > 0)
         ? Payments.Where(p => p.Amount > 0)

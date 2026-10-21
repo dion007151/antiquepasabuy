@@ -161,7 +161,7 @@ public partial class EditOrderDialog : Window
         var paidDate = PaidDatePicker.SelectedDate ?? DateTime.Today;
 
         var existingPayments = _db.Payments.Where(p => p.OrderId == _order.Id).ToList();
-        var orderEntity = _db.Orders.Include(o => o.Items).FirstOrDefault(o => o.Id == _order.Id);
+        var orderEntity = _db.Orders.Include(o => o.Items).Include(o => o.Payments).FirstOrDefault(o => o.Id == _order.Id);
 
         if (orderEntity != null)
         {

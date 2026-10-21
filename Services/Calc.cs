@@ -237,9 +237,10 @@ public static class Calc
     {
         if (order is null || order.Status == Models.OrderStatus.CANCELLED) return 0m;
 
-        if (order.ManualFeeOverride.HasValue && !string.IsNullOrWhiteSpace(order.FeeOverrideNote))
+        if (order.ManualFeeOverride.HasValue && (order.IsFeeAdjusted || !string.IsNullOrWhiteSpace(order.FeeOverrideNote)))
         {
-            return PasabuyFee(order.Items, feeTiers, order.ManualFeeOverride.Value, order.FeeOverrideNote, out _);
+            var note = !string.IsNullOrWhiteSpace(order.FeeOverrideNote) ? order.FeeOverrideNote : "Manual fee override";
+            return PasabuyFee(order.Items, feeTiers, order.ManualFeeOverride.Value, note, out _);
         }
 
         return PasabuyFee(order.Items, feeTiers, null, null, out _);

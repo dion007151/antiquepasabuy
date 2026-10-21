@@ -768,6 +768,7 @@ public partial class NewOrderPage : Page
         {
             var existingOrder = _db.Orders
                 .Include(o => o.Items)
+                .Include(o => o.Payments)
                 .FirstOrDefault(o => o.Id == _existingTodayPoId.Value);
 
             if (existingOrder == null)

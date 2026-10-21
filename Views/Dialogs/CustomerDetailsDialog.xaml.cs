@@ -28,6 +28,8 @@ public partial class CustomerDetailsDialog : Window
 
         var orders = _db.Orders
             .AsNoTracking()
+            .Include(o => o.Items)
+            .Include(o => o.Payments)
             .Where(o => o.CustomerId == Customer.Id)
             .OrderByDescending(o => o.CreatedAt)
             .ToList();

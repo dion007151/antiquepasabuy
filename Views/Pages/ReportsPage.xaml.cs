@@ -369,6 +369,8 @@ public partial class ReportsPage : Page
             .AsNoTracking()
             .Where(o => (o.BusinessId == "ANTIQUE_PASABUY" || string.IsNullOrEmpty(o.BusinessId)) && o.CreatedAt >= from && o.CreatedAt < to && o.Status != OrderStatus.Cancelled && o.Status != OrderStatus.CANCELLED)
             .Include(o => o.Customer)
+            .Include(o => o.Items)
+            .Include(o => o.Payments)
             .ToList();
 
         var groups = orders
@@ -407,6 +409,7 @@ public partial class ReportsPage : Page
                      && (o.Status == OrderStatus.Cancelled || o.Status == OrderStatus.CANCELLED))
             .Include(o => o.Customer)
             .Include(o => o.Items)
+            .Include(o => o.Payments)
             .OrderByDescending(o => o.CreatedAt)
             .ToList();
 
