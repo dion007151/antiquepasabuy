@@ -36,7 +36,10 @@ public partial class CollectPaymentDialog : Window
 
         // Balance info
         GrandTotalText.Text = $"Total: ₱{_order.GrandTotal:N2}";
-        TotalPaidText.Text = $"Paid: ₱{_order.TotalPaid:N2}";
+        var overpaid = Calc.OverpaidAmount(_order.GrandTotal, _order.TotalPaid);
+        TotalPaidText.Text = overpaid > 0
+            ? $"Paid: ₱{_order.TotalPaid:N2} (Overpaid: ₱{overpaid:N2})"
+            : $"Paid: ₱{_order.TotalPaid:N2}";
 
         // If order is already paid, mode is "Edit Payment"
         if (_order.PaymentStatus == PaymentStatus.PAID && _existingPayment != null)
