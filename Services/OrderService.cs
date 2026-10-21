@@ -469,24 +469,31 @@ public class OrderService(AppDbContext db)
 
     private string GetNextOrderNo(string? batchCode = null)
     {
-        // Batch-style numbering: AUG2-001, AUG2-002, ... (matching owner's Excel: AUG2-154)
+        // Batch-style numbering: <batch>-001, <batch>-002, …
+        // Uses the MAX existing sequence for the batch to be safe against
+        // out-of-order inserts or gaps created by cancelled orders.
         if (!string.IsNullOrWhiteSpace(batchCode))
         {
             var batch = batchCode.Trim().ToUpperInvariant();
-            var lastBatchOrder = db.Orders
-                .Where(o => o.BatchCode == batch)
-                .OrderByDescending(o => o.Id)
-                .FirstOrDefault();
 
-            if (lastBatchOrder is null)
+            // Collect all OrderNo values for this batch and find the highest sequence.
+            var allInBatch = db.Orders
+                .Where(o => o.BatchCode == batch)
+                .Select(o => o.OrderNo)
+                .ToList();
+
+            if (allInBatch.Count == 0)
                 return $"{batch}-001";
 
-            // Extract the sequence number from the last order in this batch
-            var parts = lastBatchOrder.OrderNo.Split('-');
-            if (parts.Length >= 2 && int.TryParse(parts[^1], out int batchSeq))
-                return $"{batch}-{batchSeq + 1:D3}";
+            int maxSeq = 0;
+            foreach (var no in allInBatch)
+            {
+                var parts = no.Split('-');
+                if (parts.Length >= 2 && int.TryParse(parts[^1], out int seq) && seq > maxSeq)
+                    maxSeq = seq;
+            }
 
-            return $"{batch}-{lastBatchOrder.Id + 1:D3}";
+            return $"{batch}-{maxSeq + 1:D3}";
         }
 
         // Automatic PO number: PO-000001, PO-000002, ...

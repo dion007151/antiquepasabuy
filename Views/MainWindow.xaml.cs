@@ -68,7 +68,6 @@ public partial class MainWindow : Window
 
         RegisterNavButtons();
         UpdateSidebarBranding();
-        UpdateActiveBatchDisplay();
 
         if (AntiquePasabuyPOS.Services.BusinessProfileService.IsAngelitos)
             Navigate("RestoDashboard");
@@ -76,87 +75,9 @@ public partial class MainWindow : Window
             Navigate("Dashboard");
     }
 
-    private void UpdateActiveBatchDisplay()
-    {
-        if (ActiveBatchBadge != null)
-            ActiveBatchBadge.Visibility = Visibility.Collapsed;
-    }
+    // ActiveBatchBadge removed in 2.3; batch display is in Settings only.
 
-    private void OnSwitchActiveBatch(object sender, RoutedEventArgs e)
-    {
-        var currentBatch = SeedData.GetSetting(_db, "active_batch_code", "AUG 2");
-        var dialog = new Window
-        {
-            Title = "Switch Active Trip Batch",
-            Width = 360,
-            Height = 220,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Owner = this,
-            ResizeMode = ResizeMode.NoResize,
-            Background = System.Windows.Media.Brushes.White
-        };
-
-        var stack = new StackPanel { Margin = new Thickness(20) };
-        stack.Children.Add(new TextBlock
-        {
-            Text = "Active Batch / Trip Code",
-            FontWeight = FontWeights.Bold,
-            FontSize = 13,
-            Margin = new Thickness(0, 0, 0, 4)
-        });
-        stack.Children.Add(new TextBlock
-        {
-            Text = "e.g., AUG 2, AUG 3, JCO aug4. New orders will automatically use this batch.",
-            FontSize = 11,
-            Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(100, 116, 139)),
-            Margin = new Thickness(0, 0, 0, 10),
-            TextWrapping = TextWrapping.Wrap
-        });
-
-        var textBox = new TextBox
-        {
-            Text = currentBatch,
-            FontSize = 14,
-            FontWeight = FontWeights.Bold,
-            Padding = new Thickness(8, 6, 8, 6),
-            Margin = new Thickness(0, 0, 0, 16)
-        };
-        stack.Children.Add(textBox);
-
-        var btnPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-        var cancelBtn = new Button { Content = "Cancel", Margin = new Thickness(0, 0, 8, 0), Padding = new Thickness(14, 6, 14, 6) };
-        cancelBtn.Click += (_, _) => dialog.Close();
-
-        var saveBtn = new Button
-        {
-            Content = "Set Active Batch",
-            Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(69, 43, 134)),
-            Foreground = System.Windows.Media.Brushes.White,
-            Padding = new Thickness(16, 6, 16, 6),
-            FontWeight = FontWeights.Bold
-        };
-        saveBtn.Click += (_, _) =>
-        {
-            var val = textBox.Text.Trim().ToUpperInvariant();
-            if (string.IsNullOrWhiteSpace(val))
-            {
-                MessageBox.Show("Please enter a valid batch code.", "Invalid Batch", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-            SeedData.SetSetting(_db, "active_batch_code", val);
-            UpdateActiveBatchDisplay();
-            OrderEventBus.NotifyDataRefreshed();
-            dialog.Close();
-        };
-
-        btnPanel.Children.Add(cancelBtn);
-        btnPanel.Children.Add(saveBtn);
-        stack.Children.Add(btnPanel);
-
-        dialog.Content = stack;
-        dialog.Loaded += (_, _) => { textBox.Focus(); textBox.SelectAll(); };
-        dialog.ShowDialog();
-    }
+    // OnSwitchActiveBatch removed in 2.3; batch management moved to Settings page.
 
     private void OnProfileChanged(BusinessProfile profile)
     {

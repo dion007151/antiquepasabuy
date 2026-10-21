@@ -1203,7 +1203,7 @@ public partial class NewOrderPage : Page
             var taxableTotal = validItems.Where(i => !i.IsFeeExempt).Sum(i => i.Subtotal);
             var pasabuyFee   = BusinessProfileService.IsPasabuyFeeEnabled(_db) ? PasabuyFeeService.CalculateServiceFee(taxableTotal, _db) : 0m;
 
-            var activeBatch = SeedData.GetSetting(_db, "active_batch_code", "AUG 2");
+            var activeBatch = SeedData.GetSetting(_db, "active_batch_code");
             var preferredStore = !string.IsNullOrWhiteSpace(_lastUsedStore)
                 ? _lastUsedStore
                 : (QuickStoreCombo?.SelectedItem as string ?? QuickStoreCombo?.Text?.Trim());

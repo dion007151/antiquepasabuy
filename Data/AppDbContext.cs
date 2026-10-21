@@ -738,6 +738,9 @@ public class AppDbContext : DbContext
                     CREATE INDEX IF NOT EXISTS idx_orders_buyingday ON Orders(BuyingDay);
                     CREATE INDEX IF NOT EXISTS idx_orders_batchcode ON Orders(BatchCode);
 
+                    -- Unique constraint: two orders can never share the same OrderNo.
+                    CREATE UNIQUE INDEX IF NOT EXISTS uix_orders_orderno ON Orders(OrderNo);
+
                     CREATE INDEX IF NOT EXISTS idx_payments_orderid ON Payments(OrderId);
                     CREATE INDEX IF NOT EXISTS idx_payments_createdat ON Payments(CreatedAt);
 

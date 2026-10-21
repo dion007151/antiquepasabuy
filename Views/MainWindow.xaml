@@ -538,19 +538,6 @@
                                    FontSize="11.5" Foreground="{DynamicResource PosMutedText}" FontFamily="Segoe UI" Margin="0,1,0,0"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <!-- Active Pasabuy Batch Pill & Switcher -->
-                        <Border x:Name="ActiveBatchBadge" Visibility="Collapsed" Background="#F5F3FF" BorderBrush="#C4B5FD" BorderThickness="1.5" CornerRadius="8" Padding="10,4" Margin="0,0,10,0"
-                                ToolTip="Current Active Pasabuy Batch / Trip. Click to change.">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <md:PackIcon Kind="AirplaneTakeoff" Width="15" Height="15" Foreground="#6D28D9" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                <TextBlock Text="Trip Batch: " FontSize="11" FontWeight="SemiBold" Foreground="#6D28D9" VerticalAlignment="Center"/>
-                                <TextBlock x:Name="ActiveBatchLabel" Text="AUG 2" FontSize="11.5" FontWeight="Black" Foreground="#4338CA" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                <Button Content="Switch" Click="OnSwitchActiveBatch"
-                                        Style="{StaticResource MaterialDesignFlatButton}"
-                                        Height="22" Padding="6,0" FontSize="10" FontWeight="Bold"
-                                        Foreground="#6D28D9" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
 
                         <!-- Modern Date Badge -->
                         <Border Background="{DynamicResource PosPanel}" BorderBrush="{DynamicResource PosBorder}" BorderThickness="1" CornerRadius="8" Padding="10,5" Margin="0,0,12,0">
