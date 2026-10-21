@@ -4,79 +4,45 @@ using AntiquePasabuyPOS.Models;
 namespace AntiquePasabuyPOS.Services;
 
 /// <summary>
-/// Single source of truth calculation engine for all orders across the system (Phase 9).
-/// Enforces standard Pasabuy Fee, Delivery Fee, Discounts, Grand Total, and Balance Due.
+/// Thin wrapper that delegates all financial math to Calc (Phase 9 → Phase 2 upgrade).
+/// CalculateGrandTotal(Order) calls Calc.OrderTotal so the Pasabuy fee is always
+/// recalculated from live items (honouring IsFeeExempt and ManualFeeOverride) rather than
+/// reading the stale stored ServiceFee field.
+/// DeterminePaymentStatus delegates to Calc.PaymentStatus so a zero-total order is PAID,
+/// not UNPAID.
 /// </summary>
 public static class OrderCalculationService
 {
     public const string PasabuyFeeLabel = "Pasabuy Fee";
 
-    /// <summary>
-    /// Computes the items subtotal based on actual price (if bought) or estimated price.
-    /// Excludes unavailable and cancelled items to ensure accurate grand totals and balances.
-    /// </summary>
+    /// <summary>Items subtotal — delegates to Calc.OrderSubtotal.</summary>
     public static decimal CalculateItemsSubtotal(IEnumerable<OrderItem>? items)
-    {
-        if (items == null) return 0m;
-        return items
-            .Where(i => i.Status != ItemStatus.UNAVAILABLE && i.Status != ItemStatus.CANCELLED && !string.IsNullOrWhiteSpace(i.ProductName) && i.ProductName.Trim() != "-")
-            .Sum(i => (i.ActualPrice ?? i.EstimatedPrice) * (decimal)i.Qty);
-    }
+        => Calc.OrderSubtotal(items);
 
-    /// <summary>
-    /// Computes the grand total for an order:
-    /// Items Subtotal + Pasabuy Fee + Delivery Fee - Discount.
-    /// Never returns negative amount.
-    /// </summary>
+    /// <summary>Grand total from scalar components (legacy callers that already have the fee).</summary>
     public static decimal CalculateGrandTotal(decimal itemsSubtotal, decimal pasabuyFee, decimal deliveryFee, decimal discount)
-    {
-        var total = itemsSubtotal + pasabuyFee + deliveryFee - discount;
-        return Math.Max(0m, total);
-    }
+        => Calc.RoundMoney(Math.Max(0m, itemsSubtotal + pasabuyFee + deliveryFee - discount));
 
-    /// <summary>
-    /// Computes the grand total directly from an Order instance.
-    /// </summary>
+    /// <summary>Grand total from an Order — delegates to Calc.OrderTotal.</summary>
     public static decimal CalculateGrandTotal(Order order)
     {
         if (order == null) return 0m;
-        var subtotal = CalculateItemsSubtotal(order.Items);
-        return CalculateGrandTotal(subtotal, order.PasabuyFee, order.DeliveryFee, order.Discount);
+        return Calc.OrderTotal(order);
     }
 
-    /// <summary>
-    /// Computes the total payments collected for an order.
-    /// </summary>
+    /// <summary>Total paid — delegates to Calc.TotalPaid.</summary>
     public static decimal CalculateTotalPaid(IEnumerable<Payment>? payments)
-    {
-        if (payments == null) return 0m;
-        return payments.Sum(p => p.Amount);
-    }
+        => Calc.TotalPaid(payments);
 
-    /// <summary>
-    /// Computes the balance due: Grand Total - Total Paid.
-    /// Never returns negative balance (change tendered is handled at point of payment).
-    /// </summary>
+    /// <summary>Balance due (never negative) — delegates to Calc.BalanceDue.</summary>
     public static decimal CalculateBalance(decimal grandTotal, decimal totalPaid)
-    {
-        return Math.Max(0m, grandTotal - totalPaid);
-    }
+        => Calc.BalanceDue(grandTotal, totalPaid);
 
-    /// <summary>
-    /// Determines the canonical payment status (Phase 11): UNPAID, PARTIAL, PAID.
-    /// </summary>
+    /// <summary>Payment status — delegates to Calc.PaymentStatus.</summary>
     public static PaymentStatus DeterminePaymentStatus(decimal grandTotal, decimal totalPaid)
-    {
-        if (totalPaid <= 0m) return PaymentStatus.UNPAID;
-        if (totalPaid < grandTotal) return PaymentStatus.PARTIAL;
-        return PaymentStatus.PAID;
-    }
+        => Calc.PaymentStatus(grandTotal, totalPaid);
 
-    /// <summary>
-    /// Resolves the official Pasabuy Fee for an order subtotal using configured rate tiers.
-    /// </summary>
+    /// <summary>Pasabuy fee from a subtotal via configured rate tiers.</summary>
     public static decimal ResolvePasabuyFee(decimal itemsSubtotal, AppDbContext? db = null)
-    {
-        return PasabuyFeeService.CalculateServiceFee(itemsSubtotal, db);
-    }
+        => PasabuyFeeService.CalculateServiceFee(itemsSubtotal, db);
 }
