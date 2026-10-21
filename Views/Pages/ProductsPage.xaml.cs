@@ -43,6 +43,25 @@ public class ProductRowVm : INotifyPropertyChanged
     public string Unit => string.IsNullOrWhiteSpace(Product.Unit) ? "pc" : Product.Unit;
     public bool IsActive => Product.IsActive;
     public bool IsFeeExempt => Product.IsFeeExempt;
+    public ProductFeeType FeeType => Product.FeeType;
+    public decimal? ManualFeeAmount => Product.ManualFeeAmount;
+
+    public string FeeDisplayText => Product.FeeType switch
+    {
+        ProductFeeType.NONE => "NO FEE",
+        ProductFeeType.MANUAL => Product.ManualFeeAmount.HasValue && Product.ManualFeeAmount.Value > 0
+            ? $"₱{Product.ManualFeeAmount.Value:N2} FEE"
+            : "MANUAL",
+        _ => "STANDARD"
+    };
+
+    public Brush FeeBadgeBackground => Product.FeeType switch
+    {
+        ProductFeeType.NONE => new SolidColorBrush(Color.FromRgb(100, 116, 139)), // Slate
+        ProductFeeType.MANUAL => new SolidColorBrush(Color.FromRgb(124, 58, 237)), // Purple
+        _ => new SolidColorBrush(Color.FromRgb(5, 150, 105)) // Emerald
+    };
+
     public string? ImagePath => Product.ImagePath;
 
     private ImageSource? _thumbnail;
@@ -145,8 +164,8 @@ public partial class ProductsPage : Page
         var total   = _all.Count;
         var active  = _all.Count(p => p.IsActive);
         var inactive = _all.Count(p => !p.IsActive);
-        var withFee = _all.Count(p => !p.IsFeeExempt);
-        var noFee   = _all.Count(p => p.IsFeeExempt);
+        var withFee = _all.Count(p => p.FeeType != ProductFeeType.NONE);
+        var noFee   = _all.Count(p => p.FeeType == ProductFeeType.NONE);
 
         FilterAllBtn.Content      = $"ALL ({total})";
         FilterActiveBtn.Content   = $"ACTIVE ({active})";
@@ -189,8 +208,8 @@ public partial class ProductsPage : Page
         {
             "active"   => filtered.Where(p => p.IsActive),
             "inactive" => filtered.Where(p => !p.IsActive),
-            "withfee"  => filtered.Where(p => !p.IsFeeExempt),
-            "nofee"    => filtered.Where(p => p.IsFeeExempt),
+            "withfee"  => filtered.Where(p => p.FeeType != ProductFeeType.NONE),
+            "nofee"    => filtered.Where(p => p.FeeType == ProductFeeType.NONE),
             _          => filtered
         };
 

@@ -49,7 +49,7 @@ public class OrderService(AppDbContext db)
 
     public Order Create(
         int? customerId,
-        List<(string name, double qty, string unit, decimal price, string store, string? notes)> items,
+        List<(string name, double qty, string unit, decimal price, string store, string? notes, ProductFeeType feeType, decimal? manualFee)> items,
         DeliveryType type = DeliveryType.Pickup,
         string? address = null,
         string? notes = null,
@@ -85,12 +85,20 @@ public class OrderService(AppDbContext db)
         db.Orders.Add(order);
         db.SaveChanges();
 
-        foreach (var (name, qty, unit, price, store, itemNotes) in items)
+        foreach (var (name, qty, unit, price, store, itemNotes, itemFeeType, itemManualFee) in items)
         {
             if (string.IsNullOrWhiteSpace(name) || name.Trim() == "-" || qty <= 0) continue;
             var cleanName = name.Trim();
             var prodMatch = db.Products.AsNoTracking().FirstOrDefault(p => p.Name.ToLower() == cleanName.ToLower());
             var cost = prodMatch?.CostPrice;
+
+            var finalFeeType = itemFeeType != ProductFeeType.STANDARD
+                ? itemFeeType
+                : (prodMatch?.FeeType ?? ProductFeeType.STANDARD);
+
+            var finalManualFee = itemManualFee.HasValue
+                ? itemManualFee
+                : prodMatch?.ManualFeeAmount;
 
             var orderItem = new OrderItem
             {
@@ -103,7 +111,9 @@ public class OrderService(AppDbContext db)
                 Store = string.IsNullOrWhiteSpace(store) ? "General" : store.Trim(),
                 Notes = itemNotes,
                 Status = ItemStatus.Pending,
-                IsFeeExempt = prodMatch?.IsFeeExempt ?? false,
+                FeeType = finalFeeType,
+                ManualFeeAmount = finalManualFee,
+                IsFeeExempt = finalFeeType == ProductFeeType.NONE,
                 Source = ItemSource.STORE
             };
             order.Items.Add(orderItem);
@@ -115,6 +125,25 @@ public class OrderService(AppDbContext db)
         OrderEventBus.NotifyDataRefreshed();
 
         return order;
+    }
+
+    public Order Create(
+        int? customerId,
+        List<(string name, double qty, string unit, decimal price, string store, string? notes)> items,
+        DeliveryType type = DeliveryType.Pickup,
+        string? address = null,
+        string? notes = null,
+        decimal serviceFee = 50m,
+        decimal deliveryFee = 0m,
+        decimal discount = 0m,
+        int? createdBy = null,
+        OrderStatus status = OrderStatus.WAITING_CONFIRMATION,
+        string buyingDay = "Wednesday",
+        string? preferredStore = null,
+        string? batchCode = null)
+    {
+        var itemsWithFees = items.Select(i => (i.name, i.qty, i.unit, i.price, i.store, i.notes, ProductFeeType.STANDARD, (decimal?)null)).ToList();
+        return Create(customerId, itemsWithFees, type, address, notes, serviceFee, deliveryFee, discount, createdBy, status, buyingDay, preferredStore, batchCode);
     }
 
     public Order Create(

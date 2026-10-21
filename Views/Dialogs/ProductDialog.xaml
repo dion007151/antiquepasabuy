@@ -121,26 +121,39 @@
                 <TextBlock Text="Pasabuy Fee" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource PosSecondaryText}" Margin="0,0,0,6" FontFamily="Segoe UI"/>
                 <Border BorderBrush="{DynamicResource PosBorder}" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,0,0,10" Background="{DynamicResource PosPanel}">
                     <StackPanel>
-                        <TextBlock Text="Does this product include a Pasabuy (service) fee?" FontSize="11" Foreground="{DynamicResource PosSecondaryText}" Margin="0,0,0,8"/>
-                        <StackPanel Orientation="Horizontal">
-                            <RadioButton x:Name="WithFeeRadio" GroupName="FeeGroup" IsChecked="True"
-                                         Margin="0,0,16,0" VerticalAlignment="Center">
-                                <StackPanel Orientation="Horizontal">
-                                    <Border Background="#D1FAE5" CornerRadius="4" Padding="8,4" Margin="4,0,0,0">
-                                        <TextBlock Text="WITH PASABUY FEE" FontSize="11" FontWeight="Bold" Foreground="#065F46"/>
-                                    </Border>
-                                </StackPanel>
+                        <TextBlock Text="How is the Pasabuy service fee calculated for this product?" FontSize="11" Foreground="{DynamicResource PosSecondaryText}" Margin="0,0,0,8"/>
+                        <WrapPanel Margin="0,0,0,8">
+                            <RadioButton x:Name="StandardFeeRadio" GroupName="FeeGroup" IsChecked="True"
+                                         Margin="0,0,12,6" VerticalAlignment="Center" Checked="OnFeeRadioChanged">
+                                <Border Background="#D1FAE5" CornerRadius="4" Padding="8,4" Margin="4,0,0,0">
+                                    <TextBlock Text="STANDARD (TIER)" FontSize="10.5" FontWeight="Bold" Foreground="#065F46"/>
+                                </Border>
                             </RadioButton>
-                            <RadioButton x:Name="NoFeeRadio" GroupName="FeeGroup" VerticalAlignment="Center">
-                                <StackPanel Orientation="Horizontal">
-                                    <Border Background="{DynamicResource PosSurface}" CornerRadius="4" Padding="8,4" Margin="4,0,0,0">
-                                        <TextBlock Text="NO PASABUY FEE" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource PosSecondaryText}"/>
-                                    </Border>
-                                </StackPanel>
+                            <RadioButton x:Name="NoFeeRadio" GroupName="FeeGroup"
+                                         Margin="0,0,12,6" VerticalAlignment="Center" Checked="OnFeeRadioChanged">
+                                <Border Background="{DynamicResource PosSurface}" CornerRadius="4" Padding="8,4" Margin="4,0,0,0">
+                                    <TextBlock Text="NO FEE (EXEMPT)" FontSize="10.5" FontWeight="Bold" Foreground="{DynamicResource PosSecondaryText}"/>
+                                </Border>
                             </RadioButton>
+                            <RadioButton x:Name="ManualFeeRadio" GroupName="FeeGroup"
+                                         Margin="0,0,0,6" VerticalAlignment="Center" Checked="OnFeeRadioChanged">
+                                <Border Background="#EDE9FE" CornerRadius="4" Padding="8,4" Margin="4,0,0,0">
+                                    <TextBlock Text="MANUAL FLAT FEE" FontSize="10.5" FontWeight="Bold" Foreground="#5B21B6"/>
+                                </Border>
+                            </RadioButton>
+                        </WrapPanel>
+
+                        <!-- Manual Fee Amount Input (Visible only when ManualFeeRadio is checked) -->
+                        <StackPanel x:Name="ManualFeePanel" Visibility="Collapsed" Margin="0,4,0,6">
+                            <TextBlock Text="Flat Fee per Unit (₱)" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource PosSecondaryText}" Margin="0,0,0,4"/>
+                            <TextBox x:Name="ManualFeeAmountBox" Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     md:HintAssist.Hint="e.g. 50.00" FontSize="12.5" Padding="8,6" Width="200" HorizontalAlignment="Left"/>
+                            <TextBlock Text="This flat amount is added to the bill for each unit purchased, independent of rate tiers."
+                                       FontSize="10.5" Foreground="{DynamicResource PosMutedText}" Margin="0,4,0,0" TextWrapping="Wrap"/>
                         </StackPanel>
-                        <TextBlock Text="Select 'No Pasabuy Fee' for exempt items (e.g. SOLAR LIGHT, bulk-purchase items without service charge)."
-                                   FontSize="10.5" Foreground="{DynamicResource PosMutedText}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+
+                        <TextBlock Text="• Standard: item subtotal joins order tier subtotal&#x0a;• No Fee: exempt items (e.g. Solar lights, bulk items)&#x0a;• Manual: fixed fee per unit"
+                                   FontSize="10.5" Foreground="{DynamicResource PosMutedText}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
 

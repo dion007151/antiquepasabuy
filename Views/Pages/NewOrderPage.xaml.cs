@@ -27,7 +27,9 @@ public class OrderItemEntry : INotifyPropertyChanged
     public string Unit  { get; set; } = "pc";
     public decimal? CostPrice { get; set; }
     public decimal? ActualPrice { get; set; }
-    public bool IsFeeExempt { get; set; } = false;  // mirrors Product.IsFeeExempt — exempt items excluded from taxable subtotal
+    public bool IsFeeExempt { get; set; } = false;  // kept for backward compat
+    public ProductFeeType FeeType { get; set; } = ProductFeeType.STANDARD;
+    public decimal? ManualFeeAmount { get; set; }
 
     public decimal Price
     {
@@ -483,7 +485,9 @@ public partial class NewOrderPage : Page
                 Price = prod.Price,
                 Store = store,
                 CostPrice = prod.CostPrice,
-                IsFeeExempt = prod.IsFeeExempt
+                FeeType = prod.FeeType,
+                ManualFeeAmount = prod.ManualFeeAmount,
+                IsFeeExempt = prod.FeeType == ProductFeeType.NONE || prod.IsFeeExempt
             });
             // Sync store label
             if (!string.IsNullOrWhiteSpace(store)) SyncPrimaryStoreLabel(store);
@@ -530,7 +534,9 @@ public partial class NewOrderPage : Page
                 Price = prod.Price,
                 Store = store,
                 CostPrice = prod.CostPrice,
-                IsFeeExempt = prod.IsFeeExempt
+                FeeType = prod.FeeType,
+                ManualFeeAmount = prod.ManualFeeAmount,
+                IsFeeExempt = prod.FeeType == ProductFeeType.NONE || prod.IsFeeExempt
             });
         }
     }
@@ -642,6 +648,9 @@ public partial class NewOrderPage : Page
         var matchedProd = _allProducts?.FirstOrDefault(p => string.Equals(p.Name, itemName, StringComparison.OrdinalIgnoreCase));
         var matchedCost = matchedProd?.CostPrice;
 
+        var matchedFeeType = matchedProd?.FeeType ?? ProductFeeType.STANDARD;
+        var matchedManualFee = matchedProd?.ManualFeeAmount;
+
         // Add directly to ticket items collection (triggers automatic fee recalc & ticket refresh)
         _items.Add(new OrderItemEntry
         {
@@ -651,7 +660,9 @@ public partial class NewOrderPage : Page
             Qty = qty,
             Unit = "pc",
             CostPrice = matchedCost,
-            IsFeeExempt = matchedProd?.IsFeeExempt ?? false
+            FeeType = matchedFeeType,
+            ManualFeeAmount = matchedManualFee,
+            IsFeeExempt = matchedFeeType == ProductFeeType.NONE || (matchedProd?.IsFeeExempt ?? false)
         });
 
         // Reset inputs for next rapid keyboard entry
@@ -945,16 +956,7 @@ public partial class NewOrderPage : Page
         {
             var count = _items.Count;
             var sub   = _items.Sum(i => i.Subtotal);
-            // Only non-exempt items contribute to the fee bracket (matches PasabuyFeeService logic)
-            var taxableSub = _items.Where(i => !i.IsFeeExempt).Sum(i => i.Subtotal);
-
-            // Manual override takes precedence over auto tier calculation
-            decimal fee;
-            if (_isFeeManual && _manualFeeOverride.HasValue)
-                fee = _manualFeeOverride.Value;
-            else
-                fee = count > 0 ? CalcFee(taxableSub) : 0m;  // uses taxable subtotal — exempt items excluded
-
+            var fee   = ComputeCurrentFee();
             var grand = sub + fee;
 
             SubtotalLabel.Text    = $"₱{sub:N2}";
@@ -975,6 +977,29 @@ public partial class NewOrderPage : Page
         {
             _isRecalculating = false;
         }
+    }
+
+    /// <summary>
+    /// Computes current service fee: manual override (if active) > tier fee + manual item flat fees.
+    /// </summary>
+    private decimal ComputeCurrentFee()
+    {
+        if (_isFeeManual && _manualFeeOverride.HasValue)
+            return _manualFeeOverride.Value;
+
+        if (_items == null || _items.Count == 0)
+            return 0m;
+
+        var tierSubtotal = _items
+            .Where(i => i.FeeType == ProductFeeType.STANDARD && !i.IsFeeExempt)
+            .Sum(i => i.Subtotal);
+
+        var manualFeeTotal = _items
+            .Where(i => i.FeeType == ProductFeeType.MANUAL && i.ManualFeeAmount.HasValue && i.ManualFeeAmount.Value > 0m)
+            .Sum(i => Calc.RoundMoney((i.ManualFeeAmount ?? 0m) * (decimal)i.Qty));
+
+        var tierFee = tierSubtotal > 0m ? CalcFee(tierSubtotal) : 0m;
+        return Calc.RoundMoney(tierFee + manualFeeTotal);
     }
 
     // ── Payment & Fulfillment Option Handlers ───────────────────────────────
@@ -1055,12 +1080,7 @@ public partial class NewOrderPage : Page
         if (sender is Button btn && btn.Tag is string tag && TenderedAmountBox != null)
         {
             var sub   = _items.Sum(i => i.Subtotal);
-            var taxableSub = _items.Where(i => !i.IsFeeExempt).Sum(i => i.Subtotal);
-            decimal fee;
-            if (_isFeeManual && _manualFeeOverride.HasValue)
-                fee = _manualFeeOverride.Value;
-            else
-                fee = _items.Count > 0 ? CalcFee(taxableSub) : 0m;  // cached — no DB hit
+            var fee   = ComputeCurrentFee();
             var grand = sub + fee;
 
             if (tag == "exact")
@@ -1083,12 +1103,7 @@ public partial class NewOrderPage : Page
             return;
 
         var sub   = _items.Sum(i => i.Subtotal);
-        var taxableSub = _items.Where(i => !i.IsFeeExempt).Sum(i => i.Subtotal);
-        decimal fee;
-        if (_isFeeManual && _manualFeeOverride.HasValue)
-            fee = _manualFeeOverride.Value;
-        else
-            fee = _items.Count > 0 ? CalcFee(taxableSub) : 0m;  // cached — no DB hit
+        var fee   = ComputeCurrentFee();
         var grand = sub + fee;
 
         // Use InvariantCulture so "100.50" always parses correctly regardless of system locale
@@ -1199,10 +1214,9 @@ public partial class NewOrderPage : Page
                 MessageBox.Show("Please add at least one valid item with a non-zero quantity.", "Invalid Order", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-            var mappedItems  = validItems.Select(i => (i.Name, i.Qty, i.Unit, i.Price, i.Store, i.Notes)).ToList();
+            var mappedItems  = validItems.Select(i => (i.Name, i.Qty, i.Unit, i.Price, i.Store, i.Notes, i.FeeType, i.ManualFeeAmount)).ToList();
             var subTotal     = validItems.Sum(i => i.Subtotal);
-            var taxableTotal = validItems.Where(i => !i.IsFeeExempt).Sum(i => i.Subtotal);
-            var pasabuyFee   = BusinessProfileService.IsPasabuyFeeEnabled(_db) ? PasabuyFeeService.CalculateServiceFee(taxableTotal, _db) : 0m;
+            var pasabuyFee   = ComputeCurrentFee();
 
             var activeBatch = SeedData.GetSetting(_db, "active_batch_code");
             var preferredStore = !string.IsNullOrWhiteSpace(_lastUsedStore)

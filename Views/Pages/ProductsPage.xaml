@@ -251,8 +251,8 @@
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <Border CornerRadius="6" Padding="8,3" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                        Background="{Binding IsFeeExempt, Converter={StaticResource FeeExemptColorConv}, ConverterParameter=bg}">
-                                    <TextBlock Text="{Binding IsFeeExempt, Converter={StaticResource FeeExemptTextConv}}"
+                                        Background="{Binding FeeBadgeBackground}">
+                                    <TextBlock Text="{Binding FeeDisplayText}"
                                                FontSize="10.5" FontWeight="Bold" HorizontalAlignment="Center"
                                                Foreground="White"/>
                                 </Border>

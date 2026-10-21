@@ -36,16 +36,22 @@ public partial class ProductDialog : Window
             PriceBox.Text = existing.Price.ToString("N2");
             UnitBox.Text = existing.Unit;
 
-            // Load Pasabuy Fee toggle
-            if (existing.IsFeeExempt)
+            // Load Pasabuy Fee setting
+            if (existing.FeeType == ProductFeeType.MANUAL)
+            {
+                ManualFeeRadio.IsChecked = true;
+                ManualFeeAmountBox.Text = existing.ManualFeeAmount?.ToString("N2") ?? "";
+                if (ManualFeePanel != null) ManualFeePanel.Visibility = Visibility.Visible;
+            }
+            else if (existing.FeeType == ProductFeeType.NONE || existing.IsFeeExempt)
             {
                 NoFeeRadio.IsChecked = true;
-                WithFeeRadio.IsChecked = false;
+                if (ManualFeePanel != null) ManualFeePanel.Visibility = Visibility.Collapsed;
             }
             else
             {
-                WithFeeRadio.IsChecked = true;
-                NoFeeRadio.IsChecked = false;
+                StandardFeeRadio.IsChecked = true;
+                if (ManualFeePanel != null) ManualFeePanel.Visibility = Visibility.Collapsed;
             }
 
             // Load existing image if present
@@ -146,6 +152,27 @@ public partial class ProductDialog : Window
             costPrice = parsedCost;
         }
 
+        // Fee calculation mode
+        var feeType = ProductFeeType.STANDARD;
+        decimal? manualFee = null;
+        if (ManualFeeRadio.IsChecked == true)
+        {
+            feeType = ProductFeeType.MANUAL;
+            if (string.IsNullOrWhiteSpace(ManualFeeAmountBox.Text) ||
+                !decimal.TryParse(ManualFeeAmountBox.Text.Replace("₱", "").Trim(), out var parsedFee) ||
+                parsedFee < 0)
+            {
+                ErrLbl.Text = "Please enter a valid flat fee per unit (₱0.00 or higher).";
+                ManualFeeAmountBox.Focus();
+                return;
+            }
+            manualFee = parsedFee;
+        }
+        else if (NoFeeRadio.IsChecked == true)
+        {
+            feeType = ProductFeeType.NONE;
+        }
+
         if (_existing is null)
         {
             var newProd = new Product
@@ -158,7 +185,9 @@ public partial class ProductDialog : Window
                 Price = price,
                 Unit = unitName,
                 IsActive = true,
-                IsFeeExempt = NoFeeRadio.IsChecked == true,
+                FeeType = feeType,
+                ManualFeeAmount = manualFee,
+                IsFeeExempt = feeType == ProductFeeType.NONE,
                 CreatedAt = DateTime.Now
             };
             _db.Products.Add(newProd);
@@ -183,7 +212,9 @@ public partial class ProductDialog : Window
             _existing.CostPrice = costPrice;
             _existing.Price = price;
             _existing.Unit = unitName;
-            _existing.IsFeeExempt = NoFeeRadio.IsChecked == true;
+            _existing.FeeType = feeType;
+            _existing.ManualFeeAmount = manualFee;
+            _existing.IsFeeExempt = feeType == ProductFeeType.NONE;
 
             if (_imageWasRemoved)
             {
@@ -246,5 +277,11 @@ public partial class ProductDialog : Window
     }
 
     private void OnCancel(object s, RoutedEventArgs e) => DialogResult = false;
+
+    private void OnFeeRadioChanged(object sender, RoutedEventArgs e)
+    {
+        if (ManualFeePanel == null) return;
+        ManualFeePanel.Visibility = (ManualFeeRadio.IsChecked == true) ? Visibility.Visible : Visibility.Collapsed;
+    }
 }
 
