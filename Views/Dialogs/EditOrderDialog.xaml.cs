@@ -78,7 +78,7 @@ public partial class EditOrderDialog : Window
         }
         if (PaymentMethodCombo.SelectedItem == null) PaymentMethodCombo.SelectedIndex = 0;
 
-        ServiceFeeBox.Text = _order.ServiceFee.ToString("F2");
+        ServiceFeeBox.Text = _order.PasabuyFee.ToString("F2");
         NotesBox.Text = _order.Notes ?? "";
         RecalcGrandTotalPreview();
     }
@@ -97,14 +97,14 @@ public partial class EditOrderDialog : Window
         if (GrandTotalPreview is null) return;
         decimal.TryParse(ServiceFeeBox.Text, out var svc);
         var sub   = _order.ItemsSubtotal;
-        var total = sub + (svc >= 0 ? svc : 0);
-        GrandTotalPreview.Text = $"₱{(total > 0 ? total : 0m):N2}";
+        var total = Calc.OrderTotal(sub, Math.Max(0m, svc));
+        GrandTotalPreview.Text = $"₱{total:N2}";
     }
 
     private void OnAutoCalcServiceFee(object sender, RoutedEventArgs e)
     {
         var fee = BusinessProfileService.IsPasabuyFeeEnabled(_db)
-            ? PasabuyFeeService.CalculateServiceFee(_order.ItemsSubtotal, _db)
+            ? Calc.PasabuyFee(_order.ItemsSubtotal)
             : 0m;
         ServiceFeeBox.Text = fee.ToString("F2");
     }
