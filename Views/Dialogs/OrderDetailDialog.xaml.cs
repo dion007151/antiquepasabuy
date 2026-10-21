@@ -98,13 +98,16 @@ public partial class OrderDetailDialog : Window
             .ToList();
 
         SubtotalVal.Text = $"₱{_order.ItemsSubtotal:N2}";
-        SvcFeeVal.Text = $"₱{_order.ServiceFee:N2}";
+        SvcFeeVal.Text = $"₱{_order.PasabuyFee:N2}";
         GrandTotalVal.Text = $"₱{_order.GrandTotal:N2}";
 
         var totalPaid = _order.TotalPaid;
-        var balance = _order.GrandTotal - totalPaid;
-        TotalPaidVal.Text = $"₱{totalPaid:N2}";
-        BalanceVal.Text = $"₱{(balance > 0 ? balance : 0m):N2}";
+        var balance = _order.Balance;
+        var overpaid = Calc.OverpaidAmount(_order.GrandTotal, totalPaid);
+        TotalPaidVal.Text = overpaid > 0
+            ? $"₱{totalPaid:N2} (Overpaid: ₱{overpaid:N2})"
+            : $"₱{totalPaid:N2}";
+        BalanceVal.Text = $"₱{balance:N2}";
         // ── Payment Information ──────────────────────────────────────────
         var lastPayment = _order.Payments?.OrderByDescending(p => p.CreatedAt).FirstOrDefault();
         var paymentStatus = _order.PaymentStatus;
