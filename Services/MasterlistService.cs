@@ -110,6 +110,38 @@ public static class MasterlistService
     }
 
     /// <summary>
+    /// Deletes a masterlist from the database.
+    /// Safely unassigns any orders previously linked to this masterlist (sets MasterlistId to NULL)
+    /// and resets the active_batch_code setting if this was the active masterlist.
+    /// Zero order data is lost.
+    /// </summary>
+    public static void Delete(AppDbContext db, int id)
+    {
+        var m = db.Masterlists.Find(id);
+        if (m is null) return;
+
+        var conn = db.Database.GetDbConnection();
+        if (conn.State != System.Data.ConnectionState.Open) conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "UPDATE Orders SET MasterlistId = NULL WHERE MasterlistId = @mid";
+        var p = cmd.CreateParameter(); p.ParameterName = "@mid"; p.Value = id; cmd.Parameters.Add(p);
+        cmd.ExecuteNonQuery();
+
+        // If this was active and setting active_batch_code matches, update setting
+        var activeSetting = db.Settings.FirstOrDefault(s => s.Key == "active_batch_code");
+        if (activeSetting != null && (string.Equals(activeSetting.Value, m.Name, StringComparison.OrdinalIgnoreCase) ||
+                                      string.Equals(activeSetting.Value, m.ControlNumber, StringComparison.OrdinalIgnoreCase)))
+        {
+            var nextActive = db.Masterlists.FirstOrDefault(other => other.Id != id && other.Status == "Active");
+            activeSetting.Value = nextActive?.Name ?? "";
+        }
+
+        db.Masterlists.Remove(m);
+        db.SaveChanges();
+    }
+
+    /// <summary>
     /// Assigns an existing Order to a masterlist (sets MasterlistId FK).
     /// The order itself is not duplicated or modified beyond the FK.
     /// </summary>
@@ -166,10 +198,10 @@ public static class MasterlistService
                 COALESCE(SUM(CASE WHEN oi.Status IN ('PURCHASED') THEN oi.PurchasedQty ELSE 0 END), 0) AS TotalPurchased,
                 COALESCE(SUM(CASE WHEN oi.Source = 'STOCK' THEN oi.Qty ELSE 0 END), 0)               AS TotalBoughtOnHand,
                 COALESCE(SUM(CASE WHEN oi.Status = 'UNAVAILABLE' THEN oi.Qty ELSE 0 END), 0)         AS TotalUnavailable,
-                0                                                      AS TotalExcess,
+                COALESCE(SUM(CASE WHEN oi.PurchasedQty > oi.Qty THEN oi.PurchasedQty - oi.Qty ELSE 0 END), 0) AS TotalExcess,
                 0                                                      AS TotalReorder
             FROM Masterlists m
-            LEFT JOIN Orders o   ON o.MasterlistId = m.Id AND o.Status != 'CANCELLED'
+            LEFT JOIN Orders o ON (o.MasterlistId = m.Id OR (o.MasterlistId IS NULL AND (UPPER(o.BatchCode) = UPPER(m.Name) OR UPPER(o.BatchCode) = UPPER(m.ControlNumber)))) AND o.Status != 'CANCELLED'
             LEFT JOIN OrderItems oi ON oi.OrderId = o.Id
             GROUP BY m.Id
             ORDER BY m.Year DESC, m.Month DESC, m.Id DESC";
@@ -190,12 +222,12 @@ public static class MasterlistService
                 Status             = reader.GetString(7),
                 Notes              = reader.IsDBNull(8) ? null : reader.GetString(8),
                 CreatedAt          = DateTime.Parse(reader.GetString(9)),
-                OrderCount         = (int)(long)reader[10],
-                TotalOrderedItems  = (double)(long)reader[11] + (reader.IsDBNull(11) ? 0 : 0),
-                TotalPurchased     = Convert.ToDouble(reader[12]),
-                TotalBoughtOnHand  = Convert.ToDouble(reader[13]),
-                TotalUnavailable   = Convert.ToDouble(reader[14]),
-                TotalExcess        = 0,
+                OrderCount         = reader.IsDBNull(10) ? 0 : Convert.ToInt32(reader[10]),
+                TotalOrderedItems  = reader.IsDBNull(11) ? 0 : Convert.ToDouble(reader[11]),
+                TotalPurchased     = reader.IsDBNull(12) ? 0 : Convert.ToDouble(reader[12]),
+                TotalBoughtOnHand  = reader.IsDBNull(13) ? 0 : Convert.ToDouble(reader[13]),
+                TotalUnavailable   = reader.IsDBNull(14) ? 0 : Convert.ToDouble(reader[14]),
+                TotalExcess        = reader.IsDBNull(15) ? 0 : Convert.ToDouble(reader[15]),
                 TotalReorder       = 0,
             });
         }
@@ -279,6 +311,235 @@ public static class MasterlistService
             Orders     = [.. ordersDict.Values]
         };
     }
+
+    // ── UI-facing helpers ─────────────────────────────────────────────────────
+
+    /// <summary>Returns the current Active masterlist, or null if none exists.</summary>
+    public static Masterlist? GetActive(AppDbContext db)
+        => db.Masterlists.FirstOrDefault(m => m.Status == "Active");
+
+    /// <summary>
+    /// Ordered list for the Masterlist page dropdown:
+    ///   1. Active masterlist (if any) — shown first
+    ///   2. Closed masterlists alphabetically by name
+    ///   3. A sentinel entry with Id = -1 and Name = "All masterlists"
+    /// </summary>
+    public static List<MasterlistDropdownItem> GetDisplayList(AppDbContext db)
+    {
+        var items = new List<MasterlistDropdownItem>();
+
+        var all = db.Masterlists
+            .OrderBy(m => m.Status == "Active" ? 0 : 1)
+            .ThenBy(m => m.Name)
+            .ToList();
+
+        foreach (var m in all)
+        {
+            items.Add(new MasterlistDropdownItem
+            {
+                Id            = m.Id,
+                Name          = m.Status == "Active" ? $"{m.Name} (active)" : m.Name,
+                RawName       = m.Name,
+                Status        = m.Status,
+                BatchCode     = m.Name,
+                ControlNumber = m.ControlNumber,
+                StartDate     = m.StartDate
+            });
+        }
+
+        items.Add(new MasterlistDropdownItem { Id = -1, Name = "All masterlists", RawName = "All masterlists", Status = "All", BatchCode = null });
+        return items;
+    }
+
+    /// <summary>
+    /// Returns summary counts for the specified masterlist (or active if null, or all if id == -1).
+    /// </summary>
+    public static MasterlistSummary GetSummary(AppDbContext db, int? masterlistId = null)
+    {
+        Masterlist? target = null;
+        if (masterlistId.HasValue && masterlistId.Value != -1)
+        {
+            target = db.Masterlists.Find(masterlistId.Value);
+        }
+        else if (!masterlistId.HasValue)
+        {
+            target = GetActive(db);
+        }
+
+        var isAll = masterlistId == -1;
+        if (!isAll && target == null)
+        {
+            return new MasterlistSummary();
+        }
+
+        var conn = db.Database.GetDbConnection();
+        if (conn.State != System.Data.ConnectionState.Open) conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        if (isAll)
+        {
+            cmd.CommandText = @"
+                SELECT
+                    COUNT(DISTINCT o.Id)                                       AS OrderCount,
+                    COUNT(DISTINCT CASE WHEN EXISTS(
+                        SELECT 1 FROM OrderItems oi2
+                        WHERE oi2.OrderId = o.Id AND oi2.Status = 'PENDING'
+                    ) THEN o.Id END)                                           AS OrdersWithPendingItems,
+                    COALESCE((
+                        SELECT SUM(oi.Qty)
+                        FROM OrderItems oi
+                        JOIN Orders o2 ON oi.OrderId = o2.Id
+                        WHERE o2.Status != 'CANCELLED'
+                    ), 0)                                                      AS TotalClientQty,
+                    COALESCE((
+                        SELECT SUM(oi.PurchasedQty)
+                        FROM OrderItems oi
+                        JOIN Orders o2 ON oi.OrderId = o2.Id
+                        WHERE o2.Status != 'CANCELLED'
+                    ), 0)                                                      AS TotalSupplierQty,
+                    COALESCE((
+                        SELECT SUM(CASE WHEN oi.PurchasedQty > oi.Qty THEN oi.PurchasedQty - oi.Qty ELSE 0 END)
+                        FROM OrderItems oi
+                        JOIN Orders o2 ON oi.OrderId = o2.Id
+                        WHERE o2.Status != 'CANCELLED'
+                    ), 0)                                                      AS TotalExcess,
+                    COALESCE(SUM(o.ServiceFee + o.DeliveryFee - o.Discount
+                        + COALESCE((
+                            SELECT SUM(oi.EstimatedPrice * oi.Qty)
+                            FROM OrderItems oi WHERE oi.OrderId = o.Id
+                            AND oi.Status != 'UNAVAILABLE' AND oi.Status != 'CANCELLED'
+                        ), 0)
+                        - COALESCE((SELECT SUM(p.Amount) FROM Payments p WHERE p.OrderId = o.Id), 0)
+                    ), 0)                                                      AS TotalUnpaid
+                FROM Orders o
+                WHERE o.Status != 'CANCELLED'";
+        }
+        else
+        {
+            cmd.CommandText = @"
+                SELECT
+                    COUNT(DISTINCT o.Id)                                       AS OrderCount,
+                    COUNT(DISTINCT CASE WHEN EXISTS(
+                        SELECT 1 FROM OrderItems oi2
+                        WHERE oi2.OrderId = o.Id AND oi2.Status = 'PENDING'
+                    ) THEN o.Id END)                                           AS OrdersWithPendingItems,
+                    COALESCE((
+                        SELECT SUM(oi.Qty)
+                        FROM OrderItems oi
+                        JOIN Orders o2 ON oi.OrderId = o2.Id
+                        WHERE (o2.MasterlistId = @mid OR (o2.MasterlistId IS NULL AND (UPPER(o2.BatchCode) = UPPER(@name) OR UPPER(o2.BatchCode) = UPPER(@ctrl))))
+                          AND o2.Status != 'CANCELLED'
+                    ), 0)                                                      AS TotalClientQty,
+                    COALESCE((
+                        SELECT SUM(oi.PurchasedQty)
+                        FROM OrderItems oi
+                        JOIN Orders o2 ON oi.OrderId = o2.Id
+                        WHERE (o2.MasterlistId = @mid OR (o2.MasterlistId IS NULL AND (UPPER(o2.BatchCode) = UPPER(@name) OR UPPER(o2.BatchCode) = UPPER(@ctrl))))
+                          AND o2.Status != 'CANCELLED'
+                    ), 0)                                                      AS TotalSupplierQty,
+                    COALESCE((
+                        SELECT SUM(CASE WHEN oi.PurchasedQty > oi.Qty THEN oi.PurchasedQty - oi.Qty ELSE 0 END)
+                        FROM OrderItems oi
+                        JOIN Orders o2 ON oi.OrderId = o2.Id
+                        WHERE (o2.MasterlistId = @mid OR (o2.MasterlistId IS NULL AND (UPPER(o2.BatchCode) = UPPER(@name) OR UPPER(o2.BatchCode) = UPPER(@ctrl))))
+                          AND o2.Status != 'CANCELLED'
+                    ), 0)                                                      AS TotalExcess,
+                    COALESCE(SUM(o.ServiceFee + o.DeliveryFee - o.Discount
+                        + COALESCE((
+                            SELECT SUM(oi.EstimatedPrice * oi.Qty)
+                            FROM OrderItems oi WHERE oi.OrderId = o.Id
+                            AND oi.Status != 'UNAVAILABLE' AND oi.Status != 'CANCELLED'
+                        ), 0)
+                        - COALESCE((SELECT SUM(p.Amount) FROM Payments p WHERE p.OrderId = o.Id), 0)
+                    ), 0)                                                      AS TotalUnpaid
+                FROM Orders o
+                WHERE (o.MasterlistId = @mid OR (o.MasterlistId IS NULL AND (UPPER(o.BatchCode) = UPPER(@name) OR UPPER(o.BatchCode) = UPPER(@ctrl))))
+                  AND o.Status != 'CANCELLED'";
+
+            var pMid = cmd.CreateParameter(); pMid.ParameterName = "@mid"; pMid.Value = target!.Id; cmd.Parameters.Add(pMid);
+            var pName = cmd.CreateParameter(); pName.ParameterName = "@name"; pName.Value = target.Name; cmd.Parameters.Add(pName);
+            var pCtrl = cmd.CreateParameter(); pCtrl.ParameterName = "@ctrl"; pCtrl.Value = target.ControlNumber; cmd.Parameters.Add(pCtrl);
+        }
+
+        using var reader = cmd.ExecuteReader();
+        if (reader.Read())
+        {
+            return new MasterlistSummary
+            {
+                MasterlistId           = target?.Id ?? -1,
+                ControlNumber          = target?.ControlNumber ?? "ALL",
+                Name                   = target?.Name ?? "All masterlists",
+                StartDate              = target?.StartDate ?? DateTime.MinValue,
+                OrderCount             = Convert.ToInt32(reader["OrderCount"]),
+                OrdersWithPendingItems = Convert.ToInt32(reader["OrdersWithPendingItems"]),
+                TotalClientQty         = Convert.ToDouble(reader["TotalClientQty"]),
+                TotalSupplierQty       = Convert.ToDouble(reader["TotalSupplierQty"]),
+                TotalExcess            = Convert.ToDouble(reader["TotalExcess"]),
+                TotalUnpaidBalance     = Convert.ToDecimal(reader["TotalUnpaid"])
+            };
+        }
+
+        return new MasterlistSummary
+        {
+            MasterlistId  = target?.Id ?? -1,
+            ControlNumber = target?.ControlNumber ?? "ALL",
+            Name          = target?.Name ?? "All masterlists",
+            StartDate     = target?.StartDate ?? DateTime.MinValue
+        };
+    }
+
+    /// <summary>
+    /// Returns summary counts for the currently active masterlist (for the info line).
+    /// </summary>
+    public static MasterlistSummary GetActiveSummary(AppDbContext db) => GetSummary(db, null);
+
+    /// <summary>
+    /// Closes the current active masterlist, creates a new one, updates the active_batch_code
+    /// setting, and assigns all future orders to the new masterlist.
+    /// </summary>
+    public static Masterlist CloseAndCreate(AppDbContext db, string newName, DateTime startDate, int? userId = null)
+    {
+        // Close any currently active masterlist
+        var current = GetActive(db);
+        if (current != null)
+        {
+            current.Status    = "Closed";
+            current.UpdatedAt = DateTime.Now;
+            db.SaveChanges();
+        }
+
+        var now = DateTime.Now;
+        var controlNo = GenerateControlNumber(db, startDate.Month, startDate.Year);
+
+        var newMasterlist = new Masterlist
+        {
+            ControlNumber = controlNo,
+            Name          = newName.Trim(),
+            Month         = startDate.Month,
+            Year          = startDate.Year,
+            StartDate     = startDate,
+            EndDate       = startDate.AddDays(365), // open-ended; closed on next creation
+            Status        = "Active",
+            CreatedBy     = userId,
+            CreatedAt     = now,
+            UpdatedAt     = now
+        };
+        db.Masterlists.Add(newMasterlist);
+
+        // Update the active_batch_code setting so NewOrderPage picks it up
+        var setting = db.Settings.FirstOrDefault(s => s.Key == "active_batch_code");
+        if (setting is null)
+        {
+            db.Settings.Add(new AntiquePasabuyPOS.Models.Setting { Key = "active_batch_code", Value = newName.Trim() });
+        }
+        else
+        {
+            setting.Value = newName.Trim();
+        }
+
+        db.SaveChanges();
+        return newMasterlist;
+    }
 }
 
 // ── View-Model helper classes ─────────────────────────────────────────────────
@@ -314,6 +575,38 @@ public class MasterlistRowVm
     public bool IsActive   => Status == "Active";
     public bool IsClosed   => Status == "Closed";
     public bool IsArchived => Status == "Archived";
+
+    public string StatusBadgeColor => Status switch
+    {
+        "Active"   => "#16A34A",
+        "Closed"   => "#64748B",
+        "Archived" => "#D97706",
+        _          => "#6B7280"
+    };
+
+    public string StatusBadgeBg => Status switch
+    {
+        "Active"   => "#DCFCE7",
+        "Closed"   => "#F1F5F9",
+        "Archived" => "#FEF3C7",
+        _          => "#F3F4F6"
+    };
+
+    public string FolderIcon => Status switch
+    {
+        "Active"   => "FolderOpenOutline",
+        "Closed"   => "FolderOutline",
+        "Archived" => "FolderZipOutline",
+        _          => "FolderOutline"
+    };
+
+    public string FolderColor => Status switch
+    {
+        "Active"   => "#4F46E5",
+        "Closed"   => "#64748B",
+        "Archived" => "#D97706",
+        _          => "#6B7280"
+    };
 }
 
 public class MasterlistDetailVm
@@ -323,6 +616,9 @@ public class MasterlistDetailVm
 
     public int    TotalOrders      => Orders.Count;
     public int    TotalItems       => Orders.Sum(o => o.Items.Count);
+    public double TotalClientQty   => Orders.SelectMany(o => o.Items).Sum(i => i.Qty);
+    public double TotalSupplierQty => Orders.SelectMany(o => o.Items).Sum(i => i.PurchasedQty ?? 0);
+    public double TotalExcess      => Orders.SelectMany(o => o.Items).Sum(i => i.ExcessQty);
     public double TotalPurchased   => Orders.SelectMany(o => o.Items)
                                            .Where(i => i.ItemStatus == "PURCHASED")
                                            .Sum(i => i.PurchasedQty ?? i.Qty);
@@ -359,6 +655,9 @@ public class MasterlistItemVm
     public decimal? ActualPrice       { get; set; }
     public string   ItemStatus        { get; set; } = "PENDING";
     public double?  PurchasedQty      { get; set; }
+    public double   ExcessQty         => PurchasedQty.HasValue && PurchasedQty.Value > Qty ? (PurchasedQty.Value - Qty) : 0;
+    public bool     HasExcess         => ExcessQty > 0;
+    public string   ExcessDisplay     => HasExcess ? $"+{ExcessQty:0.##} EXCESS" : "";
     public string   Store             { get; set; } = "General";
     public string   Source            { get; set; } = "STORE";
     public decimal? CostPrice         { get; set; }
@@ -386,4 +685,31 @@ public class MasterlistItemVm
         "Reorder"         => "#D97706",
         _                 => "#6366F1"     // New
     };
+}
+
+public class MasterlistDropdownItem
+{
+    public int       Id            { get; set; }
+    public string    Name          { get; set; } = "";
+    public string    RawName       { get; set; } = "";
+    public string    Status        { get; set; } = "";
+    public string?   BatchCode     { get; set; }
+    public string?   ControlNumber { get; set; }
+    public DateTime? StartDate     { get; set; }
+    public bool IsAll => Id == -1;
+    public override string ToString() => Name;
+}
+
+public class MasterlistSummary
+{
+    public int      MasterlistId           { get; set; }
+    public string   ControlNumber          { get; set; } = "";
+    public string   Name                   { get; set; } = "";
+    public DateTime StartDate              { get; set; }
+    public int      OrderCount             { get; set; }
+    public int      OrdersWithPendingItems { get; set; }
+    public double   TotalClientQty         { get; set; }
+    public double   TotalSupplierQty       { get; set; }
+    public double   TotalExcess            { get; set; }
+    public decimal  TotalUnpaidBalance     { get; set; }
 }

@@ -327,4 +327,48 @@ public class StockTests : IDisposable
         // Initial 0 + sum of changes = final quantity
         Assert.Equal(refreshedProd.StockQuantity, movementSum);
     }
+
+    [Fact]
+    public void CreateOrder_WithStockItem_DeductsInventoryImmediately_From10To5()
+    {
+        var product = new Product
+        {
+            Name = "Premium Rice 5kg",
+            Price = 280m,
+            CostPrice = 230m,
+            IsStockItem = true,
+            StockQuantity = 10,
+            IsActive = true
+        };
+        _db.Products.Add(product);
+        _db.SaveChanges();
+
+        var orderSvc = new OrderService(_db);
+        var items = new List<(string name, double qty, string unit, decimal price, string store)>
+        {
+            ("Premium Rice 5kg", 5, "sack", 280m, "On hand")
+        };
+
+        var created = orderSvc.Create(
+            customerId: null,
+            items: items,
+            type: DeliveryType.Pickup
+        );
+
+        Assert.NotNull(created);
+        Assert.Single(created.Items);
+        Assert.Equal(ItemStatus.BOUGHT_FROM_STOCK, created.Items.First().Status);
+
+        // 10 stock items, buy 5 -> becomes 5 stock left
+        var refreshed = _db.Products.Find(product.Id);
+        Assert.NotNull(refreshed);
+        Assert.Equal(5, refreshed.StockQuantity);
+
+        var stockSvc = new StockService(_db);
+        var movements = stockSvc.GetMovements(product.Id);
+        Assert.Single(movements);
+        Assert.Equal(-5, movements[0].ChangeQty);
+        Assert.Equal(5, movements[0].NewQuantity);
+        Assert.Equal($"Order {created.OrderNo}", movements[0].Note);
+    }
 }

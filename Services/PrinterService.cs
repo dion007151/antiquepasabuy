@@ -525,11 +525,28 @@ public static class PrinterService
         sb.AppendLine(TwoCol("Shopping Day:", order.BuyingDay));
         sb.AppendLine(Line('-'));
 
-        // Items Section
-        var validItems = order.Items?.Where(i => !string.IsNullOrWhiteSpace(i.ProductName)).ToList() ?? new List<OrderItem>();
-        var storeGroups = validItems
-            .GroupBy(i => string.IsNullOrWhiteSpace(i.Store) ? "General Store" : i.Store.Trim())
-            .OrderBy(g => g.Key)
+        // Items Section — consolidated by product name+price (no store grouping on receipt)
+        var allItems = order.Items?.Where(i => !string.IsNullOrWhiteSpace(i.ProductName)).ToList() ?? new List<OrderItem>();
+        // Group identical items: same product name (case-insensitive), unit, and effective price → sum quantities
+        var consolidatedItems = allItems
+            .GroupBy(i => (
+                Name: i.ProductName.Trim(),
+                Unit: (i.Unit ?? "").Trim(),
+                Price: i.ActualPrice ?? i.EstimatedPrice,
+                Status: i.Status,
+                Source: i.Source
+            ))
+            .Select(g => new {
+                ProductName = g.Key.Name,
+                Unit = g.Key.Unit,
+                Price = g.Key.Price,
+                Status = g.Key.Status,
+                Source = g.Key.Source,
+                Qty = g.Sum(i => i.Qty),
+                CostPrice = g.First().CostPrice,
+                PurchaseNotes = g.Select(i => i.PurchaseNotes ?? i.Notes).FirstOrDefault(n => !string.IsNullOrWhiteSpace(n))
+            })
+            .OrderBy(i => i.ProductName)
             .ToList();
 
         if (W >= 38)
@@ -538,54 +555,62 @@ public static class PrinterService
             sb.AppendLine(Line('-'));
         }
 
-        foreach (var group in storeGroups)
+        foreach (var item in consolidatedItems)
         {
-            if (storeGroups.Count > 1 || group.Key != "General Store")
-            {
-                sb.AppendLine($"STORE: {group.Key.ToUpper()}");
-            }
+            var total = item.Price * (decimal)item.Qty;
+            var qtyStr = item.Qty % 1 == 0 ? $"{item.Qty:0}" : $"{item.Qty:0.##}";
+            var isUnavailable = item.Status == ItemStatus.UNAVAILABLE;
+            var isBoughtOnHand = item.Source == ItemSource.STOCK || item.Status == ItemStatus.BOUGHT_FROM_STOCK;
+            var isReorder = item.Status == ItemStatus.REORDER;
 
-            foreach (var item in group)
+            if (W >= 38)
             {
-                var price = item.ActualPrice ?? item.EstimatedPrice;
-                var total = price * (decimal)item.Qty;
-                var qtyStr = item.Qty % 1 == 0 ? $"{item.Qty:0}" : $"{item.Qty:0.##}";
-
-                if (W >= 38)
+                var qCol = qtyStr.PadLeft(3);
+                var prCol = $"{item.Price:N2}".PadLeft(8);
+                var totCol = isUnavailable ? "   N/A  " : $"{total:N2}".PadLeft(8);
+                var maxNameLen = W - 3 - 1 - 8 - 1 - 8 - 1;
+                var name = item.ProductName;
+                if (name.Length > maxNameLen)
                 {
-                    var qCol = qtyStr.PadLeft(3);
-                    var prCol = $"{price:N2}".PadLeft(8);
-                    var totCol = $"{total:N2}".PadLeft(8);
-                    var maxNameLen = W - 3 - 1 - 8 - 1 - 8 - 1;
-                    var name = item.ProductName;
-                    if (name.Length > maxNameLen)
-                    {
-                        sb.AppendLine($"{qCol} {name.Substring(0, maxNameLen)} {prCol} {totCol}");
-                        sb.AppendLine($"    {name.Substring(maxNameLen)}");
-                    }
-                    else
-                    {
-                        sb.AppendLine($"{qCol} {name.PadRight(maxNameLen)} {prCol} {totCol}");
-                    }
+                    sb.AppendLine($"{qCol} {name.Substring(0, maxNameLen)} {prCol} {totCol}");
+                    sb.AppendLine($"    {name.Substring(maxNameLen)}");
                 }
                 else
                 {
-                    sb.AppendLine(item.ProductName);
-                    sb.AppendLine(TwoCol($"  {qtyStr} x ₱{price:N2}", $"₱{total:N2}"));
-                }
-
-                if (item.CostPrice.HasValue && item.CostPrice.Value > price)
-                {
-                    var unitSavings = item.CostPrice.Value - price;
-                    sb.AppendLine($"    Orig: ₱{item.CostPrice.Value:N2} | Saved: ₱{unitSavings:N2}");
-                }
-
-                if (!string.IsNullOrWhiteSpace(item.PurchaseNotes ?? item.Notes))
-                {
-                    sb.AppendLine($"  * {item.PurchaseNotes ?? item.Notes}");
+                    sb.AppendLine($"{qCol} {name.PadRight(maxNameLen)} {prCol} {totCol}");
                 }
             }
+            else
+            {
+                sb.AppendLine(item.ProductName);
+                if (isUnavailable)
+                    sb.AppendLine(TwoCol($"  {qtyStr} x ₱{item.Price:N2}", "[N/A]"));
+                else
+                    sb.AppendLine(TwoCol($"  {qtyStr} x ₱{item.Price:N2}", $"₱{total:N2}"));
+            }
+
+            // Status tags
+            if (isUnavailable)
+                sb.AppendLine($"  [NOT AVAILABLE]");
+            else if (isBoughtOnHand)
+                sb.AppendLine($"  [BOUGHT ON HAND]");
+            else if (isReorder)
+                sb.AppendLine($"  [REORDER]");
+
+            if (item.CostPrice.HasValue && item.CostPrice.Value > item.Price)
+            {
+                var unitSavings = item.CostPrice.Value - item.Price;
+                sb.AppendLine($"    Orig: ₱{item.CostPrice.Value:N2} | Saved: ₱{unitSavings:N2}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(item.PurchaseNotes))
+            {
+                sb.AppendLine($"  * {item.PurchaseNotes}");
+            }
         }
+
+        // Keep validItems for summary calculations below
+        var validItems = allItems;
 
         if (validItems.Count == 0)
         {
@@ -1123,7 +1148,6 @@ public static class PrinterService
 
         // ─── HEADER: Logo + Brand Title (left) | Order Metadata (right) ────────
         var profile = BusinessProfileService.GetProfileById(order.BusinessId) ?? BusinessProfileService.ActiveProfile;
-        // Logo row — full width, centered above the split header
         var logoBlockA4 = BuildLogoBlock(cw, maxHeight: 60, profile.LogoResource);
         if (logoBlockA4 != null) doc.Blocks.Add(logoBlockA4);
 
@@ -1135,16 +1159,15 @@ public static class PrinterService
 
         var pLeft = new Paragraph { Margin = new Thickness(0) };
         pLeft.Inlines.Add(new Run($"{profile.SystemName}\n") { FontSize = 16, FontWeight = FontWeights.Bold, Foreground = Brushes.Black });
-        pLeft.Inlines.Add(new Run($"{profile.Subtitle}\n") { FontSize = 12, FontWeight = FontWeights.Bold, Foreground = Hex(profile.PrimaryColor) });
-        pLeft.Inlines.Add(new Run("PURCHASE ORDER\n") { FontSize = 13, FontWeight = FontWeights.Bold, Foreground = Hex("#0F172A") });
+        pLeft.Inlines.Add(new Run($"{profile.Subtitle}\n") { FontSize = 12, FontWeight = FontWeights.Bold, Foreground = Brushes.Black });
+        pLeft.Inlines.Add(new Run("PURCHASE ORDER\n") { FontSize = 13, FontWeight = FontWeights.Bold, Foreground = Brushes.Black });
         hr.Cells.Add(new TableCell(pLeft));
 
         var pRight = new Paragraph { Margin = new Thickness(0), TextAlignment = TextAlignment.Right, LineHeight = 18 };
-        pRight.Inlines.Add(new Run($"PO #: {order.OrderNo}\n") { FontSize = 13, FontWeight = FontWeights.Bold });
-        pRight.Inlines.Add(new Run($"Date: {order.CreatedAt:MMM dd, yyyy  h:mm tt}\n") { FontSize = 10, Foreground = Hex("#334155") });
+        pRight.Inlines.Add(new Run($"PO #: {order.OrderNo}\n") { FontSize = 13, FontWeight = FontWeights.Bold, Foreground = Brushes.Black });
+        pRight.Inlines.Add(new Run($"Date: {order.CreatedAt:MMM dd, yyyy  h:mm tt}\n") { FontSize = 10, FontWeight = FontWeights.Bold, Foreground = Brushes.Black });
         var custName = order.Customer?.Name ?? "Walk-in";
-        pRight.Inlines.Add(new Run($"Customer: {custName}\n") { FontSize = 10.5, FontWeight = FontWeights.SemiBold });
-        // Buying Day kept in DB — not printed on customer-facing receipt.
+        pRight.Inlines.Add(new Run($"Customer: {custName}\n") { FontSize = 10.5, FontWeight = FontWeights.Bold, Foreground = Brushes.Black });
         hr.Cells.Add(new TableCell(pRight));
 
         hg.Rows.Add(hr);
@@ -1154,144 +1177,186 @@ public static class PrinterService
         // Divider
         doc.Blocks.Add(new Paragraph
         {
-            BorderBrush     = Hex("#0F172A"),
+            BorderBrush     = Brushes.Black,
             BorderThickness = new Thickness(0, 1.5, 0, 0),
             Margin          = new Thickness(0, 2, 0, 12)
         });
 
-        // Items Table
-        var validItems = order.Items?.Where(i => !string.IsNullOrWhiteSpace(i.ProductName)).ToList() ?? new List<OrderItem>();
-        var storeGroups = validItems
-            .GroupBy(i => string.IsNullOrWhiteSpace(i.Store) ? "General Store" : i.Store.Trim())
-            .OrderBy(g => g.Key)
+        // Items Table — consolidated items, NO STORE column, bold black text, unavailable in red
+        var allItems = order.Items?.Where(i => !string.IsNullOrWhiteSpace(i.ProductName)).ToList() ?? new List<OrderItem>();
+        var consolidatedItems = allItems
+            .GroupBy(i => (
+                Name: i.ProductName.Trim(),
+                Unit: (i.Unit ?? "").Trim(),
+                Price: i.ActualPrice ?? i.EstimatedPrice,
+                Status: i.Status,
+                Source: i.Source
+            ))
+            .Select(g => new {
+                ProductName = g.Key.Name,
+                Unit = g.Key.Unit,
+                Price = g.Key.Price,
+                Status = g.Key.Status,
+                Source = g.Key.Source,
+                Qty = g.Sum(i => i.Qty),
+                CostPrice = g.First().CostPrice,
+                PurchaseNotes = g.Select(i => i.PurchaseNotes ?? i.Notes).FirstOrDefault(n => !string.IsNullOrWhiteSpace(n))
+            })
+            .OrderBy(i => i.ProductName)
             .ToList();
 
         var table = new Table { CellSpacing = 0, Margin = new Thickness(0, 0, 0, 10) };
-        double wQty   = 55;
-        double wStore = 120;
-        double wPrice = 90;
-        double wTotal = 95;
-        double wItem  = Math.Max(120, cw - wQty - wStore - wPrice - wTotal);
+        double wQty   = 65;
+        double wPrice = 110;
+        double wTotal = 110;
+        double wItem  = Math.Max(180, cw - wQty - wPrice - wTotal);
 
         table.Columns.Add(new TableColumn { Width = new GridLength(wQty) });
         table.Columns.Add(new TableColumn { Width = new GridLength(wItem) });
-        table.Columns.Add(new TableColumn { Width = new GridLength(wStore) });
         table.Columns.Add(new TableColumn { Width = new GridLength(wPrice) });
         table.Columns.Add(new TableColumn { Width = new GridLength(wTotal) });
 
         var thg = new TableRowGroup();
-        var thr = new TableRow { Background = Hex("#F8FAFC") };
+        var thr = new TableRow { Background = Hex("#F1F5F9") };
 
         void AddTh(string text, TextAlignment align)
         {
             thr.Cells.Add(new TableCell(new Paragraph(new Run(text))
             {
-                FontSize      = 9.5,
+                FontSize      = 10,
                 FontWeight    = FontWeights.Bold,
-                Foreground    = Hex("#1E293B"),
+                Foreground    = Brushes.Black,
                 TextAlignment = align,
                 Margin        = new Thickness(0)
             })
             {
                 Padding         = new Thickness(6, 6, 6, 6),
-                BorderBrush     = Hex("#CBD5E1"),
+                BorderBrush     = Brushes.Black,
                 BorderThickness = new Thickness(0, 1, 0, 1.5)
             });
         }
         AddTh("QTY", TextAlignment.Center);
         AddTh("ITEM / PRODUCT", TextAlignment.Left);
-        AddTh("STORE", TextAlignment.Left);
         AddTh("PRICE", TextAlignment.Right);
         AddTh("TOTAL", TextAlignment.Right);
         thg.Rows.Add(thr);
         table.RowGroups.Add(thg);
 
         var bg = new TableRowGroup();
-        foreach (var group in storeGroups)
+        foreach (var item in consolidatedItems)
         {
-            foreach (var item in group)
+            var isUnavailable = item.Status == ItemStatus.UNAVAILABLE;
+            var isBoughtOnHand = item.Source == ItemSource.STOCK || item.Status == ItemStatus.BOUGHT_FROM_STOCK;
+            var isReorder = item.Status == ItemStatus.REORDER;
+
+            var price = item.Price;
+            var total = price * (decimal)item.Qty;
+            var qtyStr = item.Qty % 1 == 0 ? $"{item.Qty:0}" : $"{item.Qty:0.##}";
+
+            var itemBrush = isUnavailable ? Brushes.Red : Brushes.Black;
+            var tr = new TableRow();
+
+            // Qty
+            tr.Cells.Add(new TableCell(new Paragraph(new Run(qtyStr))
             {
-                var price = item.ActualPrice ?? item.EstimatedPrice;
-                var total = price * (decimal)item.Qty;
-                var qtyStr = item.Qty % 1 == 0 ? $"{item.Qty:0}" : $"{item.Qty:0.##}";
+                FontSize      = 10,
+                FontWeight    = FontWeights.Bold,
+                Foreground    = itemBrush,
+                TextAlignment = TextAlignment.Center,
+                Margin        = new Thickness(0)
+            }) { Padding = new Thickness(6, 5, 6, 5), BorderBrush = Brushes.Black, BorderThickness = new Thickness(0, 0, 0, 0.5) });
 
-                var tr = new TableRow();
-
-                // Qty
-                tr.Cells.Add(new TableCell(new Paragraph(new Run(qtyStr))
-                {
-                    FontSize      = 9.5,
-                    TextAlignment = TextAlignment.Center,
-                    Margin        = new Thickness(0)
-                }) { Padding = new Thickness(6, 5, 6, 5), BorderBrush = Hex("#E2E8F0"), BorderThickness = new Thickness(0, 0, 0, 1) });
-
-                // Item Name + Notes
-                var pItm = new Paragraph(new Run(item.ProductName))
-                {
-                    FontSize   = 9.5,
-                    FontWeight = FontWeights.SemiBold,
-                    Margin     = new Thickness(0)
-                };
-                if (item.CostPrice.HasValue && item.CostPrice.Value > price)
-                {
-                    var unitSavings = item.CostPrice.Value - price;
-                    pItm.Inlines.Add(new LineBreak());
-                    pItm.Inlines.Add(new Run($"Orig: ₱{item.CostPrice.Value:N2} | Saved: ₱{unitSavings:N2}")
-                    {
-                        FontSize   = 8.5,
-                        FontWeight = FontWeights.SemiBold,
-                        Foreground = Hex("#16A34A")
-                    });
-                }
-                if (!string.IsNullOrWhiteSpace(item.PurchaseNotes ?? item.Notes))
-                {
-                    pItm.Inlines.Add(new LineBreak());
-                    pItm.Inlines.Add(new Run($"* {item.PurchaseNotes ?? item.Notes}")
-                    {
-                        FontSize   = 8.5,
-                        FontStyle  = FontStyles.Italic,
-                        Foreground = Hex("#64748B")
-                    });
-                }
-                tr.Cells.Add(new TableCell(pItm) { Padding = new Thickness(6, 5, 6, 5), BorderBrush = Hex("#E2E8F0"), BorderThickness = new Thickness(0, 0, 0, 1) });
-
-                // Store
-                tr.Cells.Add(new TableCell(new Paragraph(new Run(group.Key))
+            // Item Name + Notes + Status tags
+            var pItm = new Paragraph
+            {
+                FontSize   = 10,
+                FontWeight = FontWeights.Bold,
+                Foreground = itemBrush,
+                Margin     = new Thickness(0)
+            };
+            pItm.Inlines.Add(new Run(item.ProductName));
+            if (isUnavailable)
+            {
+                pItm.Inlines.Add(new Run(" [NOT AVAILABLE]")
                 {
                     FontSize   = 9,
-                    Foreground = Hex("#452B86"),
-                    FontWeight = FontWeights.SemiBold,
-                    Margin     = new Thickness(0)
-                }) { Padding = new Thickness(6, 5, 6, 5), BorderBrush = Hex("#E2E8F0"), BorderThickness = new Thickness(0, 0, 0, 1) });
-
-                // Price
-                tr.Cells.Add(new TableCell(new Paragraph(new Run($"₱{price:N2}"))
-                {
-                    FontSize      = 9.5,
-                    TextAlignment = TextAlignment.Right,
-                    Margin        = new Thickness(0)
-                }) { Padding = new Thickness(6, 5, 6, 5), BorderBrush = Hex("#E2E8F0"), BorderThickness = new Thickness(0, 0, 0, 1) });
-
-                // Total
-                tr.Cells.Add(new TableCell(new Paragraph(new Run($"₱{total:N2}"))
-                {
-                    FontSize      = 9.5,
-                    FontWeight    = FontWeights.SemiBold,
-                    TextAlignment = TextAlignment.Right,
-                    Margin        = new Thickness(0)
-                }) { Padding = new Thickness(6, 5, 6, 5), BorderBrush = Hex("#E2E8F0"), BorderThickness = new Thickness(0, 0, 0, 1) });
-
-                bg.Rows.Add(tr);
+                    FontWeight = FontWeights.Bold,
+                    Foreground = Brushes.Red
+                });
             }
+            else if (isBoughtOnHand)
+            {
+                pItm.Inlines.Add(new Run(" [BOUGHT ON HAND]")
+                {
+                    FontSize   = 9,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = Brushes.Black
+                });
+            }
+            else if (isReorder)
+            {
+                pItm.Inlines.Add(new Run(" [REORDER]")
+                {
+                    FontSize   = 9,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = Brushes.Black
+                });
+            }
+
+            if (item.CostPrice.HasValue && item.CostPrice.Value > price)
+            {
+                var unitSavings = item.CostPrice.Value - price;
+                pItm.Inlines.Add(new LineBreak());
+                pItm.Inlines.Add(new Run($"Orig: ₱{item.CostPrice.Value:N2} | Saved: ₱{unitSavings:N2}")
+                {
+                    FontSize   = 8.5,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = Brushes.Black
+                });
+            }
+            if (!string.IsNullOrWhiteSpace(item.PurchaseNotes))
+            {
+                pItm.Inlines.Add(new LineBreak());
+                pItm.Inlines.Add(new Run($"* {item.PurchaseNotes}")
+                {
+                    FontSize   = 8.5,
+                    FontStyle  = FontStyles.Italic,
+                    FontWeight = FontWeights.SemiBold,
+                    Foreground = Brushes.Black
+                });
+            }
+            tr.Cells.Add(new TableCell(pItm) { Padding = new Thickness(6, 5, 6, 5), BorderBrush = Brushes.Black, BorderThickness = new Thickness(0, 0, 0, 0.5) });
+
+            // Price
+            tr.Cells.Add(new TableCell(new Paragraph(new Run(isUnavailable ? "—" : $"₱{price:N2}"))
+            {
+                FontSize      = 10,
+                FontWeight    = FontWeights.Bold,
+                Foreground    = itemBrush,
+                TextAlignment = TextAlignment.Right,
+                Margin        = new Thickness(0)
+            }) { Padding = new Thickness(6, 5, 6, 5), BorderBrush = Brushes.Black, BorderThickness = new Thickness(0, 0, 0, 0.5) });
+
+            // Total
+            tr.Cells.Add(new TableCell(new Paragraph(new Run(isUnavailable ? "—" : $"₱{total:N2}"))
+            {
+                FontSize      = 10,
+                FontWeight    = FontWeights.Bold,
+                Foreground    = itemBrush,
+                TextAlignment = TextAlignment.Right,
+                Margin        = new Thickness(0)
+            }) { Padding = new Thickness(6, 5, 6, 5), BorderBrush = Brushes.Black, BorderThickness = new Thickness(0, 0, 0, 0.5) });
+
+            bg.Rows.Add(tr);
         }
 
-        if (validItems.Count == 0)
+        if (consolidatedItems.Count == 0)
         {
             var empRow = new TableRow();
             empRow.Cells.Add(new TableCell(new Paragraph(new Run("(No items recorded)"))
             {
-                FontSize = 9.5, TextAlignment = TextAlignment.Center, Foreground = Hex("#64748B")
-            }) { ColumnSpan = 5, Padding = new Thickness(6, 10, 6, 10) });
+                FontSize = 10, FontWeight = FontWeights.Bold, TextAlignment = TextAlignment.Center, Foreground = Brushes.Black
+            }) { ColumnSpan = 4, Padding = new Thickness(6, 10, 6, 10) });
             bg.Rows.Add(empRow);
         }
 
@@ -1304,26 +1369,26 @@ public static class PrinterService
         decimal discount = order.Discount;
         decimal estimatedTotal = Math.Max(0m, purchaseBudget + pasabuyFee - discount);
 
-        // Summary Block (Right-Aligned)
-        var pFin = new Paragraph { Margin = new Thickness(0, 4, 0, 12), TextAlignment = TextAlignment.Right, LineHeight = 19 };
-        pFin.Inlines.Add(new Run($"PURCHASE BUDGET ({validItems.Count} items): ₱{purchaseBudget:N2}\n") { FontSize = 10.5, FontWeight = FontWeights.SemiBold });
-        pFin.Inlines.Add(new Run($"PASABUY FEE: ₱{pasabuyFee:N2}\n") { FontSize = 10.5, FontWeight = FontWeights.SemiBold });
+        // Summary Block (Right-Aligned, all black & bold)
+        var pFin = new Paragraph { Margin = new Thickness(0, 4, 0, 12), TextAlignment = TextAlignment.Right, LineHeight = 20 };
+        pFin.Inlines.Add(new Run($"PURCHASE BUDGET ({consolidatedItems.Count} items): ₱{purchaseBudget:N2}\n") { FontSize = 10.5, FontWeight = FontWeights.Bold, Foreground = Brushes.Black });
+        pFin.Inlines.Add(new Run($"PASABUY FEE: ₱{pasabuyFee:N2}\n") { FontSize = 10.5, FontWeight = FontWeights.Bold, Foreground = Brushes.Black });
         if (discount > 0)
         {
-            pFin.Inlines.Add(new Run($"DISCOUNT: -₱{discount:N2}\n") { FontSize = 10.5, Foreground = Hex("#16A34A") });
+            pFin.Inlines.Add(new Run($"DISCOUNT: -₱{discount:N2}\n") { FontSize = 10.5, FontWeight = FontWeights.Bold, Foreground = Brushes.Black });
         }
-        var totalSavingsA4 = validItems
-            .Where(i => i.CostPrice.HasValue && i.CostPrice.Value > (i.ActualPrice ?? i.EstimatedPrice))
-            .Sum(i => (i.CostPrice!.Value - (i.ActualPrice ?? i.EstimatedPrice)) * (decimal)i.Qty);
+        var totalSavingsA4 = consolidatedItems
+            .Where(i => i.CostPrice.HasValue && i.CostPrice.Value > i.Price)
+            .Sum(i => (i.CostPrice!.Value - i.Price) * (decimal)i.Qty);
         if (totalSavingsA4 > 0)
         {
-            pFin.Inlines.Add(new Run($"TOTAL SAVINGS: ₱{totalSavingsA4:N2}\n") { FontSize = 11, FontWeight = FontWeights.Bold, Foreground = Hex("#16A34A") });
+            pFin.Inlines.Add(new Run($"TOTAL SAVINGS: ₱{totalSavingsA4:N2}\n") { FontSize = 11, FontWeight = FontWeights.Bold, Foreground = Brushes.Black });
         }
-        pFin.Inlines.Add(new Run("────────────────────────────────────────\n") { FontSize = 9, Foreground = Hex("#CBD5E1") });
-        pFin.Inlines.Add(new Run($"ESTIMATED TOTAL: ₱{estimatedTotal:N2}\n") { FontSize = 14, FontWeight = FontWeights.Bold, Foreground = Hex("#452B86") });
+        pFin.Inlines.Add(new Run("────────────────────────────────────────\n") { FontSize = 9, FontWeight = FontWeights.Bold, Foreground = Brushes.Black });
+        pFin.Inlines.Add(new Run($"ESTIMATED TOTAL: ₱{estimatedTotal:N2}\n") { FontSize = 14, FontWeight = FontWeights.Bold, Foreground = Brushes.Black });
         doc.Blocks.Add(pFin);
 
-        // Status, Payment, Fulfillment 3-Box Table
+        // Status, Payment, Fulfillment 3-Box Table (All black & bold)
         var gridTable = new Table { CellSpacing = 6, Margin = new Thickness(0, 0, 0, 12) };
         double colW = Math.Round((cw - 12) / 3);
         gridTable.Columns.Add(new TableColumn { Width = new GridLength(colW) });
@@ -1335,17 +1400,17 @@ public static class PrinterService
         TableCell MakeBox(string title, List<(string, string, bool)> lines)
         {
             var pBox = new Paragraph { Margin = new Thickness(0), LineHeight = 16 };
-            pBox.Inlines.Add(new Run($"{title.ToUpper()}\n") { FontSize = 9.5, FontWeight = FontWeights.Bold, Foreground = Hex("#452B86") });
+            pBox.Inlines.Add(new Run($"{title.ToUpper()}\n") { FontSize = 9.5, FontWeight = FontWeights.Bold, Foreground = Brushes.Black });
             foreach (var (lbl, val, bold) in lines)
             {
-                pBox.Inlines.Add(new Run($"{lbl} ") { FontSize = 9, Foreground = Hex("#64748B") });
-                pBox.Inlines.Add(new Run($"{val}\n") { FontSize = 9.5, FontWeight = bold ? FontWeights.Bold : FontWeights.Normal, Foreground = Hex("#0F172A") });
+                pBox.Inlines.Add(new Run($"{lbl} ") { FontSize = 9, FontWeight = FontWeights.SemiBold, Foreground = Brushes.Black });
+                pBox.Inlines.Add(new Run($"{val}\n") { FontSize = 9.5, FontWeight = bold ? FontWeights.Bold : FontWeights.Normal, Foreground = Brushes.Black });
             }
             return new TableCell(pBox)
             {
                 Padding         = new Thickness(10, 8, 10, 8),
                 Background      = Hex("#F8FAFC"),
-                BorderBrush     = Hex("#E2E8F0"),
+                BorderBrush     = Brushes.Black,
                 BorderThickness = new Thickness(1)
             };
         }
@@ -1398,8 +1463,8 @@ public static class PrinterService
             : footerMsg;
 
         var pFoot = new Paragraph { TextAlignment = TextAlignment.Center, Margin = new Thickness(0, 10, 0, 0) };
-        pFoot.Inlines.Add(new Run($"{footer}\n") { FontSize = 10, FontWeight = FontWeights.SemiBold, Foreground = Hex("#1E293B") });
-        pFoot.Inlines.Add(new Run($"Printed: {DateTime.Now:MMM dd, yyyy  h:mm tt}  •  DIONIX POS Antique Pasabuy") { FontSize = 8.5, Foreground = Hex("#64748B") });
+        pFoot.Inlines.Add(new Run($"{footer}\n") { FontSize = 10, FontWeight = FontWeights.Bold, Foreground = Brushes.Black });
+        pFoot.Inlines.Add(new Run($"Printed: {DateTime.Now:MMM dd, yyyy  h:mm tt}  •  DIONIX POS Antique Pasabuy") { FontSize = 8.5, FontWeight = FontWeights.SemiBold, Foreground = Brushes.Black });
         doc.Blocks.Add(pFoot);
 
         return doc;
@@ -1521,12 +1586,31 @@ public static class PrinterService
             hg.Rows.Add(hr);
             table.RowGroups.Add(hg);
 
+            // Consolidate same product within this store group
+            var consolidated = group
+                .GroupBy(i => (
+                    Name: i.ProductName.Trim(),
+                    Unit: (i.Unit ?? "").Trim(),
+                    EstPrice: i.EstimatedPrice
+                ))
+                .Select(g2 => new {
+                    ProductName = g2.Key.Name,
+                    Unit = g2.Key.Unit,
+                    EstimatedPrice = g2.Key.EstPrice,
+                    Qty = g2.Sum(i => i.Qty),
+                    Customers = g2.Select(i => i.Order?.Customer?.Name ?? "Walk-in").Distinct().ToList(),
+                    Orders = g2.Select(i => i.Order?.OrderNo ?? "—").Distinct().ToList(),
+                    Notes = g2.Select(i => i.PurchaseNotes).Where(n => !string.IsNullOrWhiteSpace(n)).Distinct().ToList()
+                })
+                .OrderBy(x => x.ProductName)
+                .ToList();
+
             // Table Data Rows
             var dg = new TableRowGroup();
             double storeQty = 0;
             decimal storeSubtotal = 0;
 
-            foreach (var item in group)
+            foreach (var item in consolidated)
             {
                 storeQty += item.Qty;
                 var sub = (decimal)item.Qty * item.EstimatedPrice;
@@ -1534,7 +1618,7 @@ public static class PrinterService
 
                 var row = new TableRow();
 
-                // Physical Checkbox cell — perfectly vertically aligned with product name
+                // Physical Checkbox cell
                 var checkPara = new Paragraph(new Run("☐"))
                 {
                     FontFamily = new FontFamily("Segoe UI Symbol, Arial, sans-serif"),
@@ -1565,10 +1649,10 @@ public static class PrinterService
                     FontWeight = FontWeights.SemiBold,
                     Foreground = Brushes.Black
                 });
-                if (!string.IsNullOrWhiteSpace(item.PurchaseNotes))
+                foreach (var note in item.Notes)
                 {
                     prodPara.Inlines.Add(new LineBreak());
-                    prodPara.Inlines.Add(new Run($"Note: {item.PurchaseNotes}")
+                    prodPara.Inlines.Add(new Run($"Note: {note}")
                     {
                         FontSize = 8.5,
                         FontStyle = FontStyles.Italic,
@@ -1583,7 +1667,8 @@ public static class PrinterService
                 });
 
                 // Qty & Unit
-                var qtyPara = new Paragraph(new Run($"{item.Qty:0.##} {item.Unit}".Trim()))
+                var qtyStr = item.Qty % 1 == 0 ? $"{item.Qty:0}" : $"{item.Qty:0.##}";
+                var qtyPara = new Paragraph(new Run($"{qtyStr} {item.Unit}".Trim()))
                 {
                     FontSize = 9.5,
                     FontWeight = FontWeights.SemiBold,
@@ -1597,8 +1682,9 @@ public static class PrinterService
                     BorderThickness = new Thickness(0, 0, 0, 1)
                 });
 
-                // Customer (Ordered By)
-                var custPara = new Paragraph(new Run(item.Order?.Customer?.Name ?? "Walk-in"))
+                // Customer (Ordered By) — joined if multiple
+                var custText = string.Join(", ", item.Customers);
+                var custPara = new Paragraph(new Run(custText))
                 {
                     FontSize = 9.5,
                     Foreground = Hex("#1E293B"),
@@ -1611,8 +1697,9 @@ public static class PrinterService
                     BorderThickness = new Thickness(0, 0, 0, 1)
                 });
 
-                // Order #
-                var ordPara = new Paragraph(new Run(item.Order?.OrderNo ?? "—"))
+                // Order # — joined if multiple
+                var ordText = string.Join(", ", item.Orders);
+                var ordPara = new Paragraph(new Run(ordText))
                 {
                     FontFamily = monoFont,
                     FontSize = 9,
@@ -1654,7 +1741,7 @@ public static class PrinterService
                 Foreground = Hex("#1E293B"),
                 Margin = new Thickness(0, 0, 0, 12)
             };
-            pStoreTotal.Inlines.Add(new Run($"STORE TOTAL: {storeQty:0.##} units across {group.Count()} line items   |   Est. Budget: ₱{storeSubtotal:N2}"));
+            pStoreTotal.Inlines.Add(new Run($"STORE TOTAL: {storeQty:0.##} units across {consolidated.Count} line item{(consolidated.Count != 1 ? "s" : "")}   |   Est. Budget: ₱{storeSubtotal:N2}"));
             doc.Blocks.Add(pStoreTotal);
         }
 
@@ -1765,7 +1852,7 @@ public static class PrinterService
 
         var pHeader = new Paragraph { Margin = new Thickness(0, 1, 0, 3), TextAlignment = TextAlignment.Center };
         pHeader.Inlines.Add(new Run($"{profile.SystemName}\n") { FontSize = 15, FontWeight = FontWeights.Bold, Foreground = Brushes.Black });
-        pHeader.Inlines.Add(new Run($"{profile.Subtitle}\n") { FontSize = 11, FontWeight = FontWeights.Bold, Foreground = Hex(profile.PrimaryColor) });
+        pHeader.Inlines.Add(new Run($"{profile.Subtitle}\n") { FontSize = 11, FontWeight = FontWeights.Bold, Foreground = Brushes.Black });
         pHeader.Inlines.Add(new Run("PURCHASE ORDER\n") { FontSize = 10, FontWeight = FontWeights.SemiBold, Foreground = Brushes.Black });
         doc.Blocks.Add(pHeader);
 
@@ -1826,101 +1913,131 @@ public static class PrinterService
         itemsTable.RowGroups.Add(headerGroup);
 
         var dataGroup = new TableRowGroup();
-        var validItems = order.Items?.Where(i => !string.IsNullOrWhiteSpace(i.ProductName)).ToList() ?? new List<OrderItem>();
-        var storeGroups = validItems
-            .GroupBy(i => string.IsNullOrWhiteSpace(i.Store) ? "General Store" : i.Store.Trim())
-            .OrderBy(g => g.Key)
+        var allItems80 = order.Items?.Where(i => !string.IsNullOrWhiteSpace(i.ProductName)).ToList() ?? new List<OrderItem>();
+        // Consolidate identical items: same name+price+status+source → sum qty
+        var consolidatedItems80 = allItems80
+            .GroupBy(i => (
+                Name: i.ProductName.Trim(),
+                Unit: (i.Unit ?? "").Trim(),
+                Price: i.ActualPrice ?? i.EstimatedPrice,
+                Status: i.Status,
+                Source: i.Source
+            ))
+            .Select(g => new {
+                ProductName = g.Key.Name,
+                Unit = g.Key.Unit,
+                Price = g.Key.Price,
+                Status = g.Key.Status,
+                Source = g.Key.Source,
+                Qty = g.Sum(i => i.Qty),
+                CostPrice = g.First().CostPrice,
+                PurchaseNotes = g.Select(i => i.PurchaseNotes ?? i.Notes).FirstOrDefault(n => !string.IsNullOrWhiteSpace(n))
+            })
+            .OrderBy(i => i.ProductName)
             .ToList();
+        // validItems used for summary calculations
+        var validItems = allItems80;
 
-        foreach (var group in storeGroups)
+        foreach (var item in consolidatedItems80)
         {
-            if (storeGroups.Count > 1 || group.Key != "General Store")
+            var total = item.Price * (decimal)item.Qty;
+            var qtyStr = item.Qty % 1 == 0 ? $"{item.Qty:0}" : $"{item.Qty:0.##}";
+            var isUnavailable = item.Status == ItemStatus.UNAVAILABLE;
+            var isBoughtOnHand = item.Source == ItemSource.STOCK || item.Status == ItemStatus.BOUGHT_FROM_STOCK;
+            var isReorder = item.Status == ItemStatus.REORDER;
+
+            var row = new TableRow();
+
+            // QTY — red if unavailable
+            row.Cells.Add(new TableCell(new Paragraph(new Run(qtyStr))
             {
-                var storeRow = new TableRow();
-                var pStore = new Paragraph(new Run($"STORE: {group.Key.ToUpper()}"))
+                FontSize      = 9.5,
+                FontWeight    = FontWeights.Bold,
+                Foreground    = isUnavailable ? Brushes.Red : Brushes.Black,
+                TextAlignment = TextAlignment.Center,
+                Margin        = new Thickness(0)
+            }) { Padding = new Thickness(0, 2, 2, 2) });
+
+            // ITEM NAME — red + status tag if unavailable/bought-on-hand/reorder
+            var pName = new Paragraph()
+            {
+                FontSize   = 9.5,
+                FontWeight = FontWeights.Bold,
+                Foreground = isUnavailable ? Brushes.Red : Brushes.Black,
+                Margin     = new Thickness(0)
+            };
+            pName.Inlines.Add(new Run(item.ProductName));
+            if (isUnavailable)
+            {
+                pName.Inlines.Add(new Run(" [NOT AVAILABLE]")
                 {
-                    FontSize   = 9,
+                    FontSize   = 8,
                     FontWeight = FontWeights.Bold,
-                    Foreground = Hex("#452B86"),
-                    Margin     = new Thickness(0)
-                };
-                storeRow.Cells.Add(new TableCell(pStore)
-                {
-                    ColumnSpan = 4,
-                    Padding    = new Thickness(0, 4, 0, 2)
+                    Foreground = Brushes.Red
                 });
-                dataGroup.Rows.Add(storeRow);
             }
-
-            foreach (var item in group)
+            else if (isBoughtOnHand)
             {
-                var price = item.ActualPrice ?? item.EstimatedPrice;
-                var total = price * (decimal)item.Qty;
-                var qtyStr = item.Qty % 1 == 0 ? $"{item.Qty:0}" : $"{item.Qty:0.##}";
-
-                var row = new TableRow();
-
-                // QTY
-                row.Cells.Add(new TableCell(new Paragraph(new Run(qtyStr))
+                pName.Inlines.Add(new Run(" [BOUGHT ON HAND]")
                 {
-                    FontSize      = 9.5,
-                    Foreground    = Brushes.Black,
-                    TextAlignment = TextAlignment.Center,
-                    Margin        = new Thickness(0)
-                }) { Padding = new Thickness(0, 2, 2, 2) });
-
-                // ITEM NAME
-                var pName = new Paragraph(new Run(item.ProductName))
-                {
-                    FontSize   = 9.5,
-                    FontWeight = FontWeights.SemiBold,
-                    Foreground = Brushes.Black,
-                    Margin     = new Thickness(0)
-                };
-                if (item.CostPrice.HasValue && item.CostPrice.Value > price)
-                {
-                    var unitSavings = item.CostPrice.Value - price;
-                    pName.Inlines.Add(new LineBreak());
-                    pName.Inlines.Add(new Run($"Orig: ₱{item.CostPrice.Value:N2} | Saved: ₱{unitSavings:N2}")
-                    {
-                        FontSize   = 8,
-                        FontWeight = FontWeights.SemiBold,
-                        Foreground = Hex("#16A34A")
-                    });
-                }
-                if (!string.IsNullOrWhiteSpace(item.PurchaseNotes ?? item.Notes))
-                {
-                    pName.Inlines.Add(new LineBreak());
-                    pName.Inlines.Add(new Run($"* {item.PurchaseNotes ?? item.Notes}")
-                    {
-                        FontSize   = 8,
-                        FontStyle  = FontStyles.Italic,
-                        Foreground = Hex("#475569")
-                    });
-                }
-                row.Cells.Add(new TableCell(pName) { Padding = new Thickness(2, 2, 2, 2) });
-
-                // PRICE
-                row.Cells.Add(new TableCell(new Paragraph(new Run($"₱{price:N2}"))
-                {
-                    FontSize      = 9,
-                    Foreground    = Brushes.Black,
-                    TextAlignment = TextAlignment.Right,
-                    Margin        = new Thickness(0)
-                }) { Padding = new Thickness(0, 2, 2, 2) });
-
-                // TOTAL
-                row.Cells.Add(new TableCell(new Paragraph(new Run($"₱{total:N2}"))
-                {
-                    FontSize      = 9,
-                    FontWeight    = FontWeights.SemiBold,
-                    Foreground    = Brushes.Black,
-                    TextAlignment = TextAlignment.Right,
-                    Margin        = new Thickness(0)
-                }) { Padding = new Thickness(0, 2, 0, 2) });
-
-                dataGroup.Rows.Add(row);
+                    FontSize   = 8,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = Brushes.Black
+                });
             }
+            else if (isReorder)
+            {
+                pName.Inlines.Add(new Run(" [REORDER]")
+                {
+                    FontSize   = 8,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = Brushes.Black
+                });
+            }
+            if (item.CostPrice.HasValue && item.CostPrice.Value > item.Price)
+            {
+                var unitSavings = item.CostPrice.Value - item.Price;
+                pName.Inlines.Add(new LineBreak());
+                pName.Inlines.Add(new Run($"Orig: ₱{item.CostPrice.Value:N2} | Saved: ₱{unitSavings:N2}")
+                {
+                    FontSize   = 8,
+                    FontWeight = FontWeights.SemiBold,
+                    Foreground = Brushes.Black
+                });
+            }
+            if (!string.IsNullOrWhiteSpace(item.PurchaseNotes))
+            {
+                pName.Inlines.Add(new LineBreak());
+                pName.Inlines.Add(new Run($"* {item.PurchaseNotes}")
+                {
+                    FontSize   = 8,
+                    FontStyle  = FontStyles.Italic,
+                    Foreground = Brushes.Black
+                });
+            }
+            row.Cells.Add(new TableCell(pName) { Padding = new Thickness(2, 2, 2, 2) });
+
+            // PRICE — N/A if unavailable
+            row.Cells.Add(new TableCell(new Paragraph(new Run(isUnavailable ? "—" : $"₱{item.Price:N2}"))
+            {
+                FontSize      = 9,
+                FontWeight    = FontWeights.Bold,
+                Foreground    = isUnavailable ? Brushes.Red : Brushes.Black,
+                TextAlignment = TextAlignment.Right,
+                Margin        = new Thickness(0)
+            }) { Padding = new Thickness(0, 2, 2, 2) });
+
+            // TOTAL — N/A if unavailable
+            row.Cells.Add(new TableCell(new Paragraph(new Run(isUnavailable ? "—" : $"₱{total:N2}"))
+            {
+                FontSize      = 9,
+                FontWeight    = FontWeights.Bold,
+                Foreground    = isUnavailable ? Brushes.Red : Brushes.Black,
+                TextAlignment = TextAlignment.Right,
+                Margin        = new Thickness(0)
+            }) { Padding = new Thickness(0, 2, 0, 2) });
+
+            dataGroup.Rows.Add(row);
         }
 
         if (validItems.Count == 0)
@@ -1954,14 +2071,14 @@ public static class PrinterService
         sumGroup.Rows.Add(TwoColRow("PASABUY FEE:", $"₱{pasabuyFee:N2}", bold: true, fontSize: 9.5));
         if (discount > 0)
         {
-            sumGroup.Rows.Add(TwoColRow("DISCOUNT:", $"-₱{discount:N2}", bold: true, fontSize: 9.5, fg: Hex("#16A34A")));
+            sumGroup.Rows.Add(TwoColRow("DISCOUNT:", $"-₱{discount:N2}", bold: true, fontSize: 9.5, fg: Brushes.Black));
         }
         var totalSavings80 = validItems
             .Where(i => i.CostPrice.HasValue && i.CostPrice.Value > (i.ActualPrice ?? i.EstimatedPrice))
             .Sum(i => (i.CostPrice!.Value - (i.ActualPrice ?? i.EstimatedPrice)) * (decimal)i.Qty);
         if (totalSavings80 > 0)
         {
-            sumGroup.Rows.Add(TwoColRow("TOTAL SAVINGS:", $"₱{totalSavings80:N2}", bold: true, fontSize: 9.5, fg: Hex("#16A34A")));
+            sumGroup.Rows.Add(TwoColRow("TOTAL SAVINGS:", $"₱{totalSavings80:N2}", bold: true, fontSize: 9.5, fg: Brushes.Black));
         }
         sumTable.RowGroups.Add(sumGroup);
         doc.Blocks.Add(sumTable);
@@ -1987,7 +2104,7 @@ public static class PrinterService
         {
             FontSize      = 13.5,
             FontWeight    = FontWeights.Bold,
-            Foreground    = Hex("#452B86"),
+            Foreground    = Brushes.Black,
             TextAlignment = TextAlignment.Right,
             Margin        = new Thickness(0)
         }) { Padding = new Thickness(0, 1, 0, 1) });
@@ -2017,7 +2134,7 @@ public static class PrinterService
         var payGroup = new TableRowGroup();
 
         payGroup.Rows.Add(TwoColRow("PAYMENT STATUS:", payStatus, bold: true, fontSize: 10,
-            fg: payStatus == "PAID" ? Hex("#16A34A") : (payStatus == "PARTIAL" ? Hex("#D97706") : Hex("#DC2626"))));
+            fg: Brushes.Black));
 
         var lastPayment = order.Payments?.OrderByDescending(p => p.PaymentDate ?? p.CreatedAt).FirstOrDefault();
         if (payStatus != "UNPAID")
@@ -2031,7 +2148,7 @@ public static class PrinterService
             if (payStatus == "PARTIAL")
             {
                 var bal = Math.Max(0m, estimatedTotal - order.TotalPaid);
-                payGroup.Rows.Add(TwoColRow("BALANCE DUE:", $"₱{bal:N2}", bold: true, fontSize: 9.5, fg: Hex("#DC2626")));
+                payGroup.Rows.Add(TwoColRow("BALANCE DUE:", $"₱{bal:N2}", bold: true, fontSize: 9.5, fg: Brushes.Black));
             }
 
             var payDate = lastPayment?.PaymentDate ?? lastPayment?.CreatedAt;
@@ -2043,7 +2160,7 @@ public static class PrinterService
         }
         else
         {
-            payGroup.Rows.Add(TwoColRow("BALANCE DUE:", $"₱{estimatedTotal:N2}", bold: true, fontSize: 9.5, fg: Hex("#DC2626")));
+            payGroup.Rows.Add(TwoColRow("BALANCE DUE:", $"₱{estimatedTotal:N2}", bold: true, fontSize: 9.5, fg: Brushes.Black));
         }
 
         payTable.RowGroups.Add(payGroup);
@@ -2085,7 +2202,7 @@ public static class PrinterService
         {
             FontSize      = 8,
             TextAlignment = TextAlignment.Center,
-            Foreground    = Hex("#64748B"),
+            Foreground    = Brushes.Black,
             Margin        = new Thickness(0, 0, 0, 4)
         };
         doc.Blocks.Add(pPrinted);
@@ -2161,7 +2278,7 @@ public static class PrinterService
 
         var pHeader = new Paragraph { Margin = new Thickness(0, 1, 0, 2), TextAlignment = TextAlignment.Center };
         pHeader.Inlines.Add(new Run($"{profile.SystemName}\n") { FontSize = 13.5, FontWeight = FontWeights.Bold });
-        pHeader.Inlines.Add(new Run($"{profile.Subtitle}\n") { FontSize = 10, FontWeight = FontWeights.Bold, Foreground = Hex(profile.PrimaryColor) });
+        pHeader.Inlines.Add(new Run($"{profile.Subtitle}\n") { FontSize = 10, FontWeight = FontWeights.Bold, Foreground = Brushes.Black });
         pHeader.Inlines.Add(new Run("PURCHASE ORDER\n") { FontSize = 9, FontWeight = FontWeights.SemiBold });
         doc.Blocks.Add(pHeader);
 
@@ -2182,90 +2299,129 @@ public static class PrinterService
 
         doc.Blocks.Add(ThinDivider(vMargin: 2));
 
-        // 3. ITEMS (Dedicated 2-Line Structure)
-        var validItems = order.Items?.Where(i => !string.IsNullOrWhiteSpace(i.ProductName)).ToList() ?? new List<OrderItem>();
-        var storeGroups = validItems
-            .GroupBy(i => string.IsNullOrWhiteSpace(i.Store) ? "General Store" : i.Store.Trim())
-            .OrderBy(g => g.Key)
+        // 3. ITEMS (Dedicated 2-Line Structure) — consolidated by product name+price
+        var allItems58 = order.Items?.Where(i => !string.IsNullOrWhiteSpace(i.ProductName)).ToList() ?? new List<OrderItem>();
+        var consolidatedItems58 = allItems58
+            .GroupBy(i => (
+                Name: i.ProductName.Trim(),
+                Unit: (i.Unit ?? "").Trim(),
+                Price: i.ActualPrice ?? i.EstimatedPrice,
+                Status: i.Status,
+                Source: i.Source
+            ))
+            .Select(g => new {
+                ProductName = g.Key.Name,
+                Unit = g.Key.Unit,
+                Price = g.Key.Price,
+                Status = g.Key.Status,
+                Source = g.Key.Source,
+                Qty = g.Sum(i => i.Qty),
+                CostPrice = g.First().CostPrice,
+                PurchaseNotes = g.Select(i => i.PurchaseNotes ?? i.Notes).FirstOrDefault(n => !string.IsNullOrWhiteSpace(n))
+            })
+            .OrderBy(i => i.ProductName)
             .ToList();
+        // validItems for summary section below
+        var validItems = allItems58;
 
-        foreach (var group in storeGroups)
+        foreach (var item in consolidatedItems58)
         {
-            if (storeGroups.Count > 1 || group.Key != "General Store")
+            var total = item.Price * (decimal)item.Qty;
+            var qtyStr = item.Qty % 1 == 0 ? $"{item.Qty:0}" : $"{item.Qty:0.##}";
+            var isUnavailable = item.Status == ItemStatus.UNAVAILABLE;
+            var isBoughtOnHand = item.Source == ItemSource.STOCK || item.Status == ItemStatus.BOUGHT_FROM_STOCK;
+            var isReorder = item.Status == ItemStatus.REORDER;
+
+            // Line 1: Item Name
+            var pItem = new Paragraph()
             {
-                var pStore = new Paragraph(new Run($"STORE: {group.Key.ToUpper()}"))
+                FontSize   = 9,
+                FontWeight = FontWeights.Bold,
+                Foreground = isUnavailable ? Brushes.Red : Brushes.Black,
+                Margin     = new Thickness(0, 2, 0, 0)
+            };
+            pItem.Inlines.Add(new Run(item.ProductName));
+            if (isUnavailable)
+            {
+                pItem.Inlines.Add(new Run(" [NOT AVAILABLE]")
                 {
-                    FontSize   = 8.5,
+                    FontSize   = 7.5,
                     FontWeight = FontWeights.Bold,
-                    Foreground = Hex("#452B86"),
-                    Margin     = new Thickness(0, 3, 0, 1)
-                };
-                doc.Blocks.Add(pStore);
+                    Foreground = Brushes.Red
+                });
             }
-
-            foreach (var item in group)
+            else if (isBoughtOnHand)
             {
-                var price = item.ActualPrice ?? item.EstimatedPrice;
-                var total = price * (decimal)item.Qty;
-                var qtyStr = item.Qty % 1 == 0 ? $"{item.Qty:0}" : $"{item.Qty:0.##}";
-
-                // Line 1: Item Name
-                var pItem = new Paragraph(new Run(item.ProductName))
+                pItem.Inlines.Add(new Run(" [BOUGHT ON HAND]")
                 {
-                    FontSize   = 9,
+                    FontSize   = 7.5,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = Brushes.Black
+                });
+            }
+            else if (isReorder)
+            {
+                pItem.Inlines.Add(new Run(" [REORDER]")
+                {
+                    FontSize   = 7.5,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = Brushes.Black
+                });
+            }
+            if (item.CostPrice.HasValue && item.CostPrice.Value > item.Price)
+            {
+                var unitSavings = item.CostPrice.Value - item.Price;
+                pItem.Inlines.Add(new LineBreak());
+                pItem.Inlines.Add(new Run($"Orig: ₱{item.CostPrice.Value:N2} | Saved: ₱{unitSavings:N2}")
+                {
+                    FontSize   = 7.5,
                     FontWeight = FontWeights.SemiBold,
-                    Margin     = new Thickness(0, 2, 0, 0)
+                    Foreground = Brushes.Black
+                });
+            }
+            doc.Blocks.Add(pItem);
+
+            // Line 2: Qty x Price and Total
+            var lineTable = new Table { CellSpacing = 0, Margin = new Thickness(0, 0, 0, 1) };
+            lineTable.Columns.Add(new TableColumn { Width = new GridLength(cw * 0.60) });
+            lineTable.Columns.Add(new TableColumn { Width = new GridLength(cw * 0.40) });
+            var lg = new TableRowGroup();
+            var lr = new TableRow();
+
+            var leftText = $"  {qtyStr} x ₱{item.Price:N2}";
+            var rightText = isUnavailable ? "[N/A]" : $"₱{total:N2}";
+
+            lr.Cells.Add(new TableCell(new Paragraph(new Run(leftText))
+            {
+                FontSize   = 8.5,
+                FontWeight = FontWeights.Bold,
+                Foreground = isUnavailable ? Brushes.Red : Brushes.Black,
+                Margin     = new Thickness(0)
+            }) { Padding = new Thickness(0) });
+
+            lr.Cells.Add(new TableCell(new Paragraph(new Run(rightText))
+            {
+                FontSize      = 8.5,
+                FontWeight    = FontWeights.Bold,
+                Foreground    = isUnavailable ? Brushes.Red : Brushes.Black,
+                TextAlignment = TextAlignment.Right,
+                Margin        = new Thickness(0)
+            }) { Padding = new Thickness(0) });
+
+            lg.Rows.Add(lr);
+            lineTable.RowGroups.Add(lg);
+            doc.Blocks.Add(lineTable);
+
+            if (!string.IsNullOrWhiteSpace(item.PurchaseNotes))
+            {
+                var pNote = new Paragraph(new Run($"  * {item.PurchaseNotes}"))
+                {
+                    FontSize   = 7.5,
+                    FontStyle  = FontStyles.Italic,
+                    Foreground = Brushes.Black,
+                    Margin     = new Thickness(0, 0, 0, 1)
                 };
-                if (item.CostPrice.HasValue && item.CostPrice.Value > price)
-                {
-                    var unitSavings = item.CostPrice.Value - price;
-                    pItem.Inlines.Add(new LineBreak());
-                    pItem.Inlines.Add(new Run($"Orig: ₱{item.CostPrice.Value:N2} | Saved: ₱{unitSavings:N2}")
-                    {
-                        FontSize   = 7.5,
-                        FontWeight = FontWeights.SemiBold,
-                        Foreground = Hex("#16A34A")
-                    });
-                }
-                doc.Blocks.Add(pItem);
-
-                // Line 2: Qty x Price and Total
-                var lineTable = new Table { CellSpacing = 0, Margin = new Thickness(0, 0, 0, 1) };
-                lineTable.Columns.Add(new TableColumn { Width = new GridLength(cw * 0.60) });
-                lineTable.Columns.Add(new TableColumn { Width = new GridLength(cw * 0.40) });
-                var lg = new TableRowGroup();
-                var lr = new TableRow();
-
-                lr.Cells.Add(new TableCell(new Paragraph(new Run($"  {qtyStr} x ₱{price:N2}"))
-                {
-                    FontSize   = 8.5,
-                    Foreground = Hex("#334155"),
-                    Margin     = new Thickness(0)
-                }) { Padding = new Thickness(0) });
-
-                lr.Cells.Add(new TableCell(new Paragraph(new Run($"₱{total:N2}"))
-                {
-                    FontSize      = 8.5,
-                    FontWeight    = FontWeights.SemiBold,
-                    TextAlignment = TextAlignment.Right,
-                    Margin        = new Thickness(0)
-                }) { Padding = new Thickness(0) });
-
-                lg.Rows.Add(lr);
-                lineTable.RowGroups.Add(lg);
-                doc.Blocks.Add(lineTable);
-
-                if (!string.IsNullOrWhiteSpace(item.PurchaseNotes ?? item.Notes))
-                {
-                    var pNote = new Paragraph(new Run($"  * {item.PurchaseNotes ?? item.Notes}"))
-                    {
-                        FontSize   = 7.5,
-                        FontStyle  = FontStyles.Italic,
-                        Foreground = Hex("#64748B"),
-                        Margin     = new Thickness(0, 0, 0, 1)
-                    };
-                    doc.Blocks.Add(pNote);
-                }
+                doc.Blocks.Add(pNote);
             }
         }
 
@@ -2273,6 +2429,7 @@ public static class PrinterService
         {
             doc.Blocks.Add(new Paragraph(new Run("(No items recorded)")) { FontSize = 8.5, Margin = new Thickness(0, 2, 0, 2) });
         }
+
 
         // 4. SUMMARY
         doc.Blocks.Add(ThinDivider(vMargin: 2));
@@ -2291,14 +2448,14 @@ public static class PrinterService
         sumGroup.Rows.Add(TwoColRow("PASABUY FEE:", $"₱{pasabuyFee:N2}", bold: true, fontSize: 8.5));
         if (discount > 0)
         {
-            sumGroup.Rows.Add(TwoColRow("DISCOUNT:", $"-₱{discount:N2}", bold: true, fontSize: 8.5, fg: Hex("#16A34A")));
+            sumGroup.Rows.Add(TwoColRow("DISCOUNT:", $"-₱{discount:N2}", bold: true, fontSize: 8.5, fg: Brushes.Black));
         }
         var totalSavings58 = validItems
             .Where(i => i.CostPrice.HasValue && i.CostPrice.Value > (i.ActualPrice ?? i.EstimatedPrice))
             .Sum(i => (i.CostPrice!.Value - (i.ActualPrice ?? i.EstimatedPrice)) * (decimal)i.Qty);
         if (totalSavings58 > 0)
         {
-            sumGroup.Rows.Add(TwoColRow("TOTAL SAVINGS:", $"₱{totalSavings58:N2}", bold: true, fontSize: 8.5, fg: Hex("#16A34A")));
+            sumGroup.Rows.Add(TwoColRow("TOTAL SAVINGS:", $"₱{totalSavings58:N2}", bold: true, fontSize: 8.5, fg: Brushes.Black));
         }
         sumTable.RowGroups.Add(sumGroup);
         doc.Blocks.Add(sumTable);
@@ -2316,7 +2473,7 @@ public static class PrinterService
         }) { Padding = new Thickness(0, 1, 0, 1) });
         estRow.Cells.Add(new TableCell(new Paragraph(new Run($"₱{estimatedTotal:N2}"))
         {
-            FontSize = 11.5, FontWeight = FontWeights.Bold, Foreground = Hex("#452B86"), TextAlignment = TextAlignment.Right, Margin = new Thickness(0)
+            FontSize = 11.5, FontWeight = FontWeights.Bold, Foreground = Brushes.Black, TextAlignment = TextAlignment.Right, Margin = new Thickness(0)
         }) { Padding = new Thickness(0, 1, 0, 1) });
         estGroup.Rows.Add(estRow);
         estTable.RowGroups.Add(estGroup);
@@ -2342,7 +2499,7 @@ public static class PrinterService
         payTable.Columns.Add(new TableColumn { Width = new GridLength(cw - sumLblW) });
         var payGroup = new TableRowGroup();
         payGroup.Rows.Add(TwoColRow("PAYMENT STATUS:", payStatus, bold: true, fontSize: 9,
-            fg: payStatus == "PAID" ? Hex("#16A34A") : (payStatus == "PARTIAL" ? Hex("#D97706") : Hex("#DC2626"))));
+            fg: Brushes.Black));
 
         var lastPayment = order.Payments?.OrderByDescending(p => p.PaymentDate ?? p.CreatedAt).FirstOrDefault();
         if (payStatus != "UNPAID")
@@ -2353,7 +2510,7 @@ public static class PrinterService
             if (payStatus == "PARTIAL")
             {
                 var bal = Math.Max(0m, estimatedTotal - order.TotalPaid);
-                payGroup.Rows.Add(TwoColRow("BALANCE DUE:", $"₱{bal:N2}", bold: true, fontSize: 8.5, fg: Hex("#DC2626")));
+                payGroup.Rows.Add(TwoColRow("BALANCE DUE:", $"₱{bal:N2}", bold: true, fontSize: 8.5, fg: Brushes.Black));
             }
             var payDate = lastPayment?.PaymentDate ?? lastPayment?.CreatedAt;
             if (payDate.HasValue)
@@ -2361,7 +2518,7 @@ public static class PrinterService
         }
         else
         {
-            payGroup.Rows.Add(TwoColRow("BALANCE DUE:", $"₱{estimatedTotal:N2}", bold: true, fontSize: 8.5, fg: Hex("#DC2626")));
+            payGroup.Rows.Add(TwoColRow("BALANCE DUE:", $"₱{estimatedTotal:N2}", bold: true, fontSize: 8.5, fg: Brushes.Black));
         }
         payTable.RowGroups.Add(payGroup);
         doc.Blocks.Add(payTable);
@@ -2389,7 +2546,7 @@ public static class PrinterService
         });
         doc.Blocks.Add(new Paragraph(new Run($"Printed: {DateTime.Now:MM/dd/yy h:mm tt}"))
         {
-            FontSize = 7.5, TextAlignment = TextAlignment.Center, Foreground = Hex("#64748B"), Margin = new Thickness(0)
+            FontSize = 7.5, TextAlignment = TextAlignment.Center, Foreground = Brushes.Black, Margin = new Thickness(0)
         });
 
         return doc;
@@ -2474,18 +2631,37 @@ public static class PrinterService
             };
             doc.Blocks.Add(pStore);
 
-            foreach (var item in group)
+            // Consolidate same product within the same store
+            var consolidated = group
+                .GroupBy(i => (
+                    Name: i.ProductName.Trim(),
+                    Unit: (i.Unit ?? "").Trim(),
+                    EstPrice: i.EstimatedPrice
+                ))
+                .Select(g2 => new {
+                    ProductName = g2.Key.Name,
+                    Unit = g2.Key.Unit,
+                    EstimatedPrice = g2.Key.EstPrice,
+                    Qty = g2.Sum(i => i.Qty),
+                    Customers = g2.Select(i => i.Order?.Customer?.Name ?? "Walk-in").Distinct().ToList(),
+                    Orders = g2.Select(i => i.Order?.OrderNo ?? "N/A").Distinct().ToList(),
+                    Notes = g2.Select(i => i.Notes).Where(n => !string.IsNullOrWhiteSpace(n)).Distinct().ToList()
+                })
+                .OrderBy(x => x.ProductName)
+                .ToList();
+
+            foreach (var item in consolidated)
             {
                 var pItem = new Paragraph { Margin = new Thickness(4, 2, 0, 4), LineHeight = 15, FontSize = 9.5 };
                 var qtyStr = item.Qty % 1 == 0 ? $"{item.Qty:0}" : $"{item.Qty:0.##}";
                 pItem.Inlines.Add(new Run($"☐ {item.ProductName}\n") { FontWeight = FontWeights.SemiBold, FontSize = 10 });
-                pItem.Inlines.Add(new Run($"  Qty: {qtyStr} {item.Unit}  |  Est: ₱{item.EstimatedPrice:N2}\n"));
-                var custName = item.Order?.Customer?.Name ?? "Walk-in";
-                var poNum = item.Order?.OrderNo ?? "N/A";
-                pItem.Inlines.Add(new Run($"  Ordered By: {custName}  |  PO #: {poNum}\n") { Foreground = Hex("#475569") });
-                if (!string.IsNullOrWhiteSpace(item.Notes))
+                pItem.Inlines.Add(new Run($"  Qty: {qtyStr} {item.Unit}  |  Est: ₱{item.EstimatedPrice:N2}  (×{item.Orders.Count} order{(item.Orders.Count != 1 ? "s" : "")})\n"));
+                var custLine = string.Join(", ", item.Customers);
+                var poLine = string.Join(", ", item.Orders);
+                pItem.Inlines.Add(new Run($"  Customers: {custLine}  |  PO: {poLine}\n") { Foreground = Hex("#475569") });
+                foreach (var note in item.Notes)
                 {
-                    pItem.Inlines.Add(new Run($"  Note: {item.Notes}\n") { FontStyle = FontStyles.Italic, Foreground = Hex("#64748B") });
+                    pItem.Inlines.Add(new Run($"  Note: {note}\n") { FontStyle = FontStyles.Italic, Foreground = Hex("#64748B") });
                 }
                 doc.Blocks.Add(pItem);
             }

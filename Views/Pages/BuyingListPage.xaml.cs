@@ -205,12 +205,14 @@ public partial class BuyingListPage : Page
                 .Distinct(StringComparer.OrdinalIgnoreCase).Count();
             int _posCount = rawItems.Select(i => i.OrderId).Distinct().Count();
             double _totalQty = rawItems.Sum(i => i.Qty);
+            double _totalExcess = rawItems.Sum(i => (i.PurchasedQty.HasValue && i.PurchasedQty.Value > i.Qty) ? (i.PurchasedQty.Value - i.Qty) : 0);
             decimal _estBudget = rawItems.Sum(i => (decimal)i.Qty * i.EstimatedPrice);
 
             if (StoresCountLabel != null)  StoresCountLabel.Text  = $"{_storesCount} store{(_storesCount != 1 ? "s" : "")}";
             if (POsCountLabel != null)     POsCountLabel.Text     = $"{_posCount} PO{(_posCount != 1 ? "s" : "")}";
             if (ItemsCountLabel != null)   ItemsCountLabel.Text   = $"{rawItems.Count} item{(rawItems.Count != 1 ? "s" : "")}";
             if (TotalQtyLabel != null)     TotalQtyLabel.Text     = $"{_totalQty:0.##} unit{(_totalQty != 1 ? "s" : "")}";
+            if (ExcessUnitsLabel != null)  ExcessUnitsLabel.Text  = $"{_totalExcess:0.##} excess";
             if (EstBudgetLabel != null)    EstBudgetLabel.Text    = $"\u20b1{_estBudget:N2}";
 
             // Check if Complete Buying is fully ready or has items to act on
@@ -443,11 +445,44 @@ public partial class BuyingListPage : Page
         ApplySearchFilter();
     }
 
+    private void OnBuyingSortChanged(object sender, SelectionChangedEventArgs e)
+    {
+        ApplySearchFilter();
+    }
+
+    private void OnExcessFilterToggled(object sender, RoutedEventArgs e)
+    {
+        ApplySearchFilter();
+    }
+
     private void ApplySearchFilter()
     {
         if (MainBuyingGrid == null || _allRowVms == null) return;
-        var view = System.Windows.Data.CollectionViewSource.GetDefaultView(_allRowVms);
-        if (view == null) return;
+        var sortTag = (SortFilterCombo?.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "default";
+        var isExcessOnly = ExcessOnlyCheck?.IsChecked == true;
+
+        var items = _allRowVms.AsEnumerable();
+        if (isExcessOnly)
+        {
+            items = items.Where(r => r.HasExcess);
+        }
+
+        items = sortTag switch
+        {
+            "client_qty_desc"   => items.OrderByDescending(r => r.ClientQty).ThenBy(r => r.ProductName),
+            "supplier_qty_desc" => items.OrderByDescending(r => r.SupplierQty).ThenBy(r => r.ProductName),
+            "excess_desc"       => items.OrderByDescending(r => r.ExcessQty).ThenBy(r => r.ProductName),
+            "name_asc"          => items.OrderBy(r => r.ProductName),
+            _                   => _groupByStore ? items.OrderBy(r => r.StoreName).ThenBy(r => r.ProductName) : items
+        };
+
+        var sortedList = items.ToList();
+        var view = System.Windows.Data.CollectionViewSource.GetDefaultView(sortedList);
+        view.GroupDescriptions.Clear();
+        if (_groupByStore && sortTag == "default")
+        {
+            view.GroupDescriptions.Add(new System.Windows.Data.PropertyGroupDescription(nameof(BuyingItemRowVm.StoreName)));
+        }
 
         if (string.IsNullOrWhiteSpace(_searchText))
         {
@@ -463,12 +498,16 @@ public partial class BuyingListPage : Page
                     return (!string.IsNullOrEmpty(r.ProductName) && r.ProductName.ToLowerInvariant().Contains(q)) ||
                            (!string.IsNullOrEmpty(r.StoreName) && r.StoreName.ToLowerInvariant().Contains(q)) ||
                            (!string.IsNullOrEmpty(r.CustomerDisplay) && r.CustomerDisplay.ToLowerInvariant().Contains(q)) ||
+                           (!string.IsNullOrEmpty(r.ControlNumber) && r.ControlNumber.ToLowerInvariant().Contains(q)) ||
                            (!string.IsNullOrEmpty(r.Item.PurchaseNotes) && r.Item.PurchaseNotes.ToLowerInvariant().Contains(q)) ||
                            (r.Order?.OrderNo != null && r.Order.OrderNo.ToLowerInvariant().Contains(q));
                 }
                 return true;
             };
         }
+
+        MainBuyingGrid.ItemsSource = null;
+        MainBuyingGrid.ItemsSource = view;
 
         int visibleCount = 0;
         foreach (var _ in view) visibleCount++;
@@ -1287,6 +1326,15 @@ public class BuyingItemRowVm : INotifyPropertyChanged
     public string ProductName => Item.ProductName;
     public bool HasNotes => !string.IsNullOrWhiteSpace(Item.PurchaseNotes);
     public string NotesDisplay => HasNotes ? $"Note: {Item.PurchaseNotes}" : "";
+    public double ClientQty => Item.Qty;
+    public double SupplierQty => Item.PurchasedQty ?? (Item.Status == ItemStatus.Purchased ? Item.Qty : 0);
+    public double ExcessQty => (Item.PurchasedQty.HasValue && Item.PurchasedQty.Value > Item.Qty) ? (Item.PurchasedQty.Value - Item.Qty) : 0;
+    public bool HasExcess => ExcessQty > 0;
+    public string ExcessDisplay => HasExcess ? $"+{ExcessQty:0.##} EXCESS" : "";
+    public string ControlNumber => Item.Order?.Masterlist?.ControlNumber
+                                ?? Item.Order?.BatchCode
+                                ?? Item.Order?.OrderNo
+                                ?? "";
     public string QtyDisplay => Item.PurchasedQty.HasValue ? $"{Item.PurchasedQty.Value:0.#} / {Item.Qty:0.#} {Item.Unit}" : $"{Item.Qty:0.#} {Item.Unit}";
     public string CustomerDisplay => $"{Item.Order?.Customer?.Name ?? "Walk-in"} ({Item.Order?.OrderNo})";
     public Order? Order => Item.Order;

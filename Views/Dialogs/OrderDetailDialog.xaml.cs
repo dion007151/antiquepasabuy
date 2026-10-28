@@ -32,6 +32,18 @@ public partial class OrderDetailDialog : Window
         StatusLabel.Text = OrderStatusService.FormatStatus(_order.Status);
         StatusBadge.Background = GetStatusBrush(_order.Status);
 
+        string ctrlNo = "";
+        if (_order.MasterlistId.HasValue)
+        {
+            var ml = _order.Masterlist ?? _db.Masterlists.AsNoTracking().FirstOrDefault(m => m.Id == _order.MasterlistId.Value);
+            ctrlNo = ml?.ControlNumber ?? ml?.Name ?? "";
+        }
+        if (string.IsNullOrWhiteSpace(ctrlNo))
+        {
+            ctrlNo = !string.IsNullOrWhiteSpace(_order.BatchCode) ? _order.BatchCode : _order.OrderNo;
+        }
+        ControlNoLabel.Text = ctrlNo;
+
         // Cancel/edit button visibility — hide entirely for terminal states
         var isTerminal = _order.Status is OrderStatus.COMPLETED or OrderStatus.CANCELLED;
         CancelOrderBtn.Visibility = isTerminal ? Visibility.Collapsed : Visibility.Visible;
@@ -348,6 +360,38 @@ public partial class OrderDetailDialog : Window
             ReloadOrder();
             StatusMessage.Text = $"Pasabuy fee auto-calculated: ₱{autoFee:N2}";
             StatusMessage.Foreground = new SolidColorBrush(Color.FromRgb(13, 148, 136));
+        }
+    }
+
+    private void OnDeleteOrder(object sender, RoutedEventArgs e)
+    {
+        var confirm = MessageBox.Show(
+            $"Are you sure you want to permanently delete Order {_order.OrderNo}?\n\nThis will remove the order, all its items, and recorded payments. This cannot be undone.",
+            "Delete Order",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (confirm != MessageBoxResult.Yes) return;
+
+        try
+        {
+            var svc = new OrderService(_db);
+            var ok = svc.Delete(_order.Id);
+            if (ok)
+            {
+                OrderEventBus.NotifyDataRefreshed();
+                MessageBox.Show($"Order {_order.OrderNo} has been deleted successfully.", "Order Deleted", MessageBoxButton.OK, MessageBoxImage.Information);
+                DialogResult = true;
+                Close();
+            }
+            else
+            {
+                MessageBox.Show("Could not find the order to delete.", "Delete Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to delete order: {ex.Message}", "Delete Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

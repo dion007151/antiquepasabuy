@@ -71,6 +71,12 @@
                                            Foreground="White" FontSize="11" FontWeight="Bold" FontFamily="Segoe UI"/>
                             </StackPanel>
                         </Border>
+                        <Border x:Name="ControlNoBadge" CornerRadius="6" Background="#2FFFFFFF" Padding="10,4" Margin="10,0,0,0" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="CTRL NO: " FontSize="10.5" FontWeight="SemiBold" Foreground="#DDFFFFFF"/>
+                                <TextBlock x:Name="ControlNoLabel" Text="-" FontSize="10.5" FontWeight="Bold" Foreground="White"/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                     <TextBlock x:Name="DateLabel" Text="Created: Jan 01, 2026"
                                FontSize="11.5" Foreground="#FFFFFFBB" FontFamily="Segoe UI" Margin="32,0,0,0"/>
@@ -525,6 +531,15 @@
                         <StackPanel Orientation="Horizontal">
                             <md:PackIcon Kind="Cancel" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,5,0"/>
                             <TextBlock Text="Cancel Order" FontSize="11.5" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="DeleteOrderBtn" Click="OnDeleteOrder"
+                            Style="{StaticResource Pos3DTableDangerBtn}"
+                            Height="36" Padding="14,0" Margin="0,0,8,0"
+                            ToolTip="Permanently delete this order from the system">
+                        <StackPanel Orientation="Horizontal">
+                            <md:PackIcon Kind="TrashCanOutline" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock Text="Delete Order" FontSize="11.5" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Button>
                     <Button Content="Close" Click="OnClose" Style="{StaticResource Pos3DSecondaryBtn}"

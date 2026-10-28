@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window x:Class="AntiquePasabuyPOS.Views.Dialogs.MasterlistOrganizerDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Masterlist Organizer"
+        Width="780" Height="600"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResizeWithGrip"
+        Background="{DynamicResource PosBackground}"
+        Style="{StaticResource MaterialDesignWindow}">
+
+    <Grid Margin="24,20,24,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>  <!-- Header -->
+            <RowDefinition Height="Auto"/>  <!-- Search & Filter toolbar -->
+            <RowDefinition Height="*"/>     <!-- Masterlist file/folder cards list -->
+            <RowDefinition Height="Auto"/>  <!-- Footer -->
+        </Grid.RowDefinitions>
+
+        <!-- ══ ROW 0: HEADER ═══════════════════════════════════════════════════ -->
+        <Grid Grid.Row="0" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Background="#EDE9FE" CornerRadius="10" Width="42" Height="42" Margin="0,0,12,0">
+                    <md:PackIcon Kind="FolderSettingsOutline" Width="24" Height="24" Foreground="#4F46E5"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Masterlist Organizer" FontSize="18" FontWeight="Bold"
+                               Foreground="{DynamicResource PosPrimaryText}" FontFamily="Segoe UI"/>
+                    <TextBlock Text="Search, inspect, organize, and delete masterlists like files in a folder"
+                               FontSize="11.5" Foreground="{DynamicResource PosSecondaryText}"
+                               FontFamily="Segoe UI" Margin="0,2,0,0"/>
+                </StackPanel>
+            </StackPanel>
+
+            <Button Grid.Column="1" Click="OnNewMasterlistClick"
+                    Style="{StaticResource Pos3DPrimaryBtn}" Height="36" Padding="14,0">
+                <StackPanel Orientation="Horizontal">
+                    <md:PackIcon Kind="FolderPlusOutline" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBlock Text="+ New masterlist" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <!-- ══ ROW 1: SEARCH & FILTER TOOLBAR ══════════════════════════════════ -->
+        <Border Grid.Row="1" Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}"
+                BorderThickness="1" CornerRadius="10" Padding="12,10" Margin="0,0,0,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Search input -->
+                <Border Grid.Column="0" Background="{DynamicResource PosBackground}" CornerRadius="8"
+                        BorderBrush="{DynamicResource PosBorder}" BorderThickness="1" Padding="10,6" Margin="0,0,14,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <md:PackIcon Kind="Magnify" Width="16" Height="16" Foreground="{DynamicResource PosMutedText}"
+                                     VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBox x:Name="SearchBox" Grid.Column="1" BorderThickness="0" FontSize="12.5" FontFamily="Segoe UI"
+                                 Foreground="{DynamicResource PosPrimaryText}" CaretBrush="{DynamicResource PosPrimary}"
+                                 md:HintAssist.Hint="Search masterlists by name, code, month or year..."
+                                 md:TextFieldAssist.DecorationVisibility="Hidden"
+                                 TextChanged="OnSearchTextChanged"/>
+                        <Button Grid.Column="2" Content="&#x2715;" Click="OnClearSearchClick"
+                                Style="{StaticResource MaterialDesignFlatButton}" Foreground="{DynamicResource PosMutedText}"
+                                Width="20" Height="20" Padding="0" Margin="4,0,0,0" ToolTip="Clear search"/>
+                    </Grid>
+                </Border>
+
+                <!-- Filter buttons -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="FilterBtnAll"      Content="All"      Tag="All"      Click="OnFilterClick" Style="{StaticResource Pos3DFilterBtn}" Margin="0,0,4,0"/>
+                    <Button x:Name="FilterBtnActive"   Content="Active"   Tag="Active"   Click="OnFilterClick" Style="{StaticResource Pos3DFilterBtn}" Margin="0,0,4,0"/>
+                    <Button x:Name="FilterBtnClosed"   Content="Closed"   Tag="Closed"   Click="OnFilterClick" Style="{StaticResource Pos3DFilterBtn}" Margin="0,0,4,0"/>
+                    <Button x:Name="FilterBtnArchived" Content="Archived" Tag="Archived" Click="OnFilterClick" Style="{StaticResource Pos3DFilterBtn}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ══ ROW 2: FOLDER-STYLE LIST ═════════════════════════════════════════ -->
+        <Border Grid.Row="2" Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}"
+                BorderThickness="1" CornerRadius="10" Padding="12">
+            <Grid>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl x:Name="MasterlistsList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource PosBackground}" BorderBrush="{DynamicResource PosBorder}"
+                                        BorderThickness="1" CornerRadius="10" Padding="14,12" Margin="0,0,0,10">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>  <!-- Folder icon -->
+                                            <ColumnDefinition Width="*"/>     <!-- Info & stats -->
+                                            <ColumnDefinition Width="Auto"/>  <!-- Actions: Open / Delete -->
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Folder Icon -->
+                                        <Border Grid.Column="0" Background="{DynamicResource PosPanel}" CornerRadius="10"
+                                                Width="46" Height="46" Margin="0,0,14,0" VerticalAlignment="Center">
+                                            <md:PackIcon Kind="{Binding FolderIcon}" Width="26" Height="26"
+                                                         Foreground="{Binding FolderColor}"
+                                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+
+                                        <!-- Masterlist Details -->
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <!-- Title & Badges -->
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,4">
+                                                <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="Bold"
+                                                           Foreground="{DynamicResource PosPrimaryText}" FontFamily="Segoe UI"
+                                                           VerticalAlignment="Center" Margin="0,0,10,0"/>
+
+                                                <!-- Status Badge -->
+                                                <Border Background="{Binding StatusBadgeBg}" CornerRadius="6" Padding="8,2"
+                                                        Margin="0,0,6,0" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Status}" FontSize="10.5" FontWeight="Bold"
+                                                               Foreground="{Binding StatusBadgeColor}" FontFamily="Segoe UI"/>
+                                                </Border>
+
+                                                <!-- Control Number -->
+                                                <Border Background="{DynamicResource PosPanel}" CornerRadius="6" Padding="6,2"
+                                                        VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding ControlNumber}" FontSize="10.5" FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource PosPrimary}" FontFamily="Segoe UI"/>
+                                                </Border>
+                                            </StackPanel>
+
+                                            <!-- Metadata & Stats Line -->
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <!-- Date Range -->
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,14,0">
+                                                    <md:PackIcon Kind="CalendarOutline" Width="14" Height="14"
+                                                                 Foreground="{DynamicResource PosMutedText}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                    <TextBlock Text="{Binding DateRangeDisplay}" FontSize="11.5"
+                                                               Foreground="{DynamicResource PosSecondaryText}" FontFamily="Segoe UI"/>
+                                                </StackPanel>
+
+                                                <!-- Orders Count Badge -->
+                                                <Border Background="{DynamicResource PosPanel}" CornerRadius="5" Padding="6,2" Margin="0,0,10,0">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <md:PackIcon Kind="ClipboardTextOutline" Width="13" Height="13"
+                                                                     Foreground="{DynamicResource PosPrimary}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                        <TextBlock Text="{Binding OrderCount, StringFormat='{}{0} orders'}"
+                                                                   FontSize="11" FontWeight="Bold" Foreground="{DynamicResource PosPrimary}"/>
+                                                    </StackPanel>
+                                                </Border>
+
+                                                <!-- Items Purchased count -->
+                                                <TextBlock Text="{Binding TotalPurchased, StringFormat='{}{0:N0} items bought'}"
+                                                           FontSize="11.5" Foreground="{DynamicResource PosSecondaryText}"
+                                                           VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </StackPanel>
+
+                                        <!-- Actions -->
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Button Tag="{Binding}" Click="OnOpenMasterlistClick"
+                                                    Style="{StaticResource Pos3DPrimaryBtn}" Height="34" Padding="14,0" Margin="0,0,8,0"
+                                                    ToolTip="Open this masterlist and view its orders">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <md:PackIcon Kind="FolderOpenOutline" Width="15" Height="15" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                    <TextBlock Text="Open" FontSize="11.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+
+                                            <Button Tag="{Binding}" Click="OnDeleteItemClick"
+                                                    Style="{StaticResource Pos3DSecondaryBtn}" Width="34" Height="34" Padding="0"
+                                                    ToolTip="Delete this masterlist folder" Cursor="Hand">
+                                                <md:PackIcon Kind="TrashCanOutline" Width="16" Height="16" Foreground="#DC2626"/>
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <!-- Empty State -->
+                <Border x:Name="EmptyStatePanel" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <StackPanel HorizontalAlignment="Center">
+                        <md:PackIcon Kind="FolderSearchOutline" Width="44" Height="44"
+                                     Foreground="{DynamicResource PosMutedText}" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                        <TextBlock Text="No masterlists found" FontSize="14" FontWeight="Bold"
+                                   Foreground="{DynamicResource PosPrimaryText}" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Try adjusting your search query or status filter." FontSize="12"
+                                   Foreground="{DynamicResource PosMutedText}" HorizontalAlignment="Center" Margin="0,4,0,14"/>
+                        <Button Click="OnResetFiltersClick" Content="Show All Masterlists"
+                                Style="{StaticResource Pos3DSecondaryBtn}" Height="32" Padding="14,0" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- ══ ROW 3: FOOTER ═══════════════════════════════════════════════════ -->
+        <Grid Grid.Row="3" Margin="0,14,0,0">
+            <TextBlock x:Name="CountSummaryText" Text="0 masterlists found" FontSize="12"
+                       Foreground="{DynamicResource PosSecondaryText}" VerticalAlignment="Center"/>
+
+            <Button HorizontalAlignment="Right" Content="Done" Click="OnDoneClick"
+                    Style="{StaticResource Pos3DSecondaryBtn}" Height="36" Padding="20,0"/>
+        </Grid>
+    </Grid>
+</Window>

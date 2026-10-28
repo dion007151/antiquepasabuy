@@ -123,6 +123,40 @@ public class OrderRowVm : INotifyPropertyChanged
         PaymentStatus.PARTIAL => $"Partly Paid: \u20b1{TotalPaid:N2} | Balance: \u20b1{Balance:N2}",
         _ => $"Not Paid \u2014 Balance due: \u20b1{Balance:N2}"
     };
+
+    public string BatchCode => Order.BatchCode ?? "";
+    public int? MasterlistId => Order.MasterlistId;
+
+    public string ControlNumber
+    {
+        get
+        {
+            if (Order.Masterlist != null && !string.IsNullOrWhiteSpace(Order.Masterlist.ControlNumber))
+                return Order.Masterlist.ControlNumber;
+            if (!string.IsNullOrWhiteSpace(Order.BatchCode))
+                return Order.BatchCode;
+            return Order.OrderNo;
+        }
+    }
+
+    // Client orders (quantity ordered by client)
+    public double ClientItemsQty => IsGroup
+        ? GroupedOrders.Sum(o => o.Items?.Where(i => !string.IsNullOrWhiteSpace(i.ProductName) && i.ProductName.Trim() != "-").Sum(i => i.Qty) ?? 0)
+        : (Order.Items?.Where(i => !string.IsNullOrWhiteSpace(i.ProductName) && i.ProductName.Trim() != "-").Sum(i => i.Qty) ?? 0);
+
+    // Supplier bought (quantity supplied/bought)
+    public double SupplierBoughtQty => IsGroup
+        ? GroupedOrders.Sum(o => o.Items?.Where(i => !string.IsNullOrWhiteSpace(i.ProductName) && i.ProductName.Trim() != "-").Sum(i => i.PurchasedQty ?? (i.Status == ItemStatus.Purchased ? i.Qty : 0)) ?? 0)
+        : (Order.Items?.Where(i => !string.IsNullOrWhiteSpace(i.ProductName) && i.ProductName.Trim() != "-").Sum(i => i.PurchasedQty ?? (i.Status == ItemStatus.Purchased ? i.Qty : 0)) ?? 0);
+
+    // Excess quantity (when supplier purchased > client requested)
+    public double ExcessQty => IsGroup
+        ? GroupedOrders.Sum(o => o.Items?.Where(i => !string.IsNullOrWhiteSpace(i.ProductName) && i.ProductName.Trim() != "-" && (i.PurchasedQty ?? 0) > i.Qty).Sum(i => (i.PurchasedQty ?? 0) - i.Qty) ?? 0)
+        : (Order.Items?.Where(i => !string.IsNullOrWhiteSpace(i.ProductName) && i.ProductName.Trim() != "-" && (i.PurchasedQty ?? 0) > i.Qty).Sum(i => (i.PurchasedQty ?? 0) - i.Qty) ?? 0);
+
+    public bool HasExcess => ExcessQty > 0;
+    public string ExcessDisplay => HasExcess ? $"+{ExcessQty:0.##} EXCESS" : "";
+    public string QtySummaryDisplay => $"{ClientItemsQty:0.##} client • {SupplierBoughtQty:0.##} supplier";
 }
 
 public partial class OrdersPage : Page
@@ -135,6 +169,10 @@ public partial class OrdersPage : Page
     private List<Order> _allOrders = [];
     private List<OrderRowVm> _allRowVms = [];
     private List<OrderRowVm> _visibleRowVms = [];
+
+    private MasterlistDropdownItem? _selectedMasterlist;
+    private List<MasterlistDropdownItem> _masterlistItems = [];
+    private bool _isUpdatingCombo = false;
 
     public OrdersPage(AppDbContext db, User user, Action<string>? navigate = null, Action? onSuccess = null, OrderStatus? initialFilter = null, string? initialPaymentFilter = null)
     {
@@ -164,12 +202,8 @@ public partial class OrdersPage : Page
 
         Loaded += (_, _) =>
         {
-            PageSubheading.Text = $"Track customer orders and update status • Today: {DateTime.Now:dddd, MMM dd, yyyy}";
-            if (_activeFilter is "waiting_confirmation" or "waiting" or "waiting_to_buy")
-            {
-                PageHeading.Text = "Waiting to Buy Orders";
-                PageSubheading.Text = "Orders waiting for scheduled shopping day";
-            }
+            PageHeading.Text = "Masterlist";
+            PageSubheading.Text = "Customer purchase orders in the selected masterlist";
             HighlightTab(_activeFilter);
             OrderEventBus.OrderStatusChanged += OnExternalStatusChanged;
             OrderEventBus.OrderCreated += OnExternalOrderCreated;
@@ -233,13 +267,44 @@ public partial class OrdersPage : Page
         try
         {
             List<Order> orders = [];
+            List<MasterlistDropdownItem> mlItems = [];
+            MasterlistSummary summary = new();
+            var targetId = _selectedMasterlist?.Id;
+
             // Run DB query on background thread with isolated context to avoid blocking the UI
             await Task.Run(() =>
             {
                 using var bgDb = new AppDbContext();
                 var svc = new OrderService(bgDb);
                 orders = svc.GetAll();
+                mlItems = MasterlistService.GetDisplayList(bgDb);
+
+                if (!targetId.HasValue)
+                {
+                    var active = mlItems.FirstOrDefault(m => m.Status == "Active") ?? mlItems.FirstOrDefault();
+                    targetId = active?.Id;
+                }
+                summary = MasterlistService.GetSummary(bgDb, targetId);
             });
+
+            _masterlistItems = mlItems;
+            _isUpdatingCombo = true;
+            MasterlistCombo.ItemsSource = _masterlistItems;
+
+            if (_selectedMasterlist != null)
+            {
+                var match = _masterlistItems.FirstOrDefault(m => m.Id == _selectedMasterlist.Id);
+                _selectedMasterlist = match ?? _masterlistItems.FirstOrDefault();
+            }
+            else
+            {
+                _selectedMasterlist = _masterlistItems.FirstOrDefault(m => m.Status == "Active") ?? _masterlistItems.FirstOrDefault();
+            }
+            MasterlistCombo.SelectedItem = _selectedMasterlist;
+            _isUpdatingCombo = false;
+
+            UpdateInfoLine(summary);
+            UpdateDeleteButtonVisibility();
 
             _allOrders = orders;
             _allRowVms = _allOrders
@@ -259,12 +324,140 @@ public partial class OrdersPage : Page
         }
     }
 
+    private void UpdateDeleteButtonVisibility()
+    {
+        if (DeleteCurrentMasterlistBtn != null)
+        {
+            DeleteCurrentMasterlistBtn.Visibility = (_selectedMasterlist != null && !_selectedMasterlist.IsAll)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+    }
+
+    private void UpdateInfoLine(MasterlistSummary summary)
+    {
+        if (MasterlistInfoLine == null) return;
+
+        var ctrlPart = !string.IsNullOrWhiteSpace(summary.ControlNumber) && summary.ControlNumber != "ALL"
+            ? $"Ctrl: {summary.ControlNumber}  •  "
+            : "";
+
+        var excessPart = summary.TotalExcess > 0
+            ? $"  •  Excess: +{summary.TotalExcess:0.##}"
+            : "";
+
+        if (summary.StartDate != DateTime.MinValue)
+        {
+            MasterlistInfoLine.Text = $"{ctrlPart}Started: {summary.StartDate:MMM dd, yyyy}  •  {summary.OrderCount} orders  •  Client: {summary.TotalClientQty:0.##}  •  Supplier: {summary.TotalSupplierQty:0.##}{excessPart}  •  Total unpaid: \u20b1{summary.TotalUnpaidBalance:N2}";
+        }
+        else
+        {
+            MasterlistInfoLine.Text = $"{ctrlPart}{summary.Name}  •  {summary.OrderCount} orders  •  Client: {summary.TotalClientQty:0.##}  •  Supplier: {summary.TotalSupplierQty:0.##}{excessPart}  •  Total unpaid: \u20b1{summary.TotalUnpaidBalance:N2}";
+        }
+    }
+
+    private void OnMasterlistSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isUpdatingCombo) return;
+        if (MasterlistCombo.SelectedItem is MasterlistDropdownItem item)
+        {
+            _selectedMasterlist = item;
+            UpdateDeleteButtonVisibility();
+            using var db = new AppDbContext();
+            var summary = MasterlistService.GetSummary(db, item.Id);
+            UpdateInfoLine(summary);
+            ApplyFilter();
+        }
+    }
+
+    private void OnOrganizeMasterlistClick(object sender, RoutedEventArgs e)
+    {
+        var dlg = new MasterlistOrganizerDialog(_db, _user)
+        {
+            Owner = Window.GetWindow(this)
+        };
+        if (dlg.ShowDialog() == true && dlg.SelectedMasterlist != null)
+        {
+            var match = _masterlistItems.FirstOrDefault(m => m.Id == dlg.SelectedMasterlist.Id);
+            if (match != null)
+            {
+                MasterlistCombo.SelectedItem = match;
+            }
+            else
+            {
+                _selectedMasterlist = null;
+                LoadData();
+            }
+        }
+        else
+        {
+            LoadData();
+        }
+    }
+
+    private void OnDeleteCurrentMasterlistClick(object sender, RoutedEventArgs e)
+    {
+        if (_selectedMasterlist == null || _selectedMasterlist.IsAll) return;
+
+        var msg = $"Are you sure you want to delete masterlist \"{_selectedMasterlist.Name}\"?\n\n" +
+                  "• All customer orders in this masterlist will stay completely safe and intact (they will be unassigned).\n" +
+                  "• This masterlist folder will be permanently deleted.\n\n" +
+                  "Do you want to proceed?";
+
+        var result = MessageBox.Show(msg, "Delete Masterlist", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (result == MessageBoxResult.Yes)
+        {
+            try
+            {
+                MasterlistService.Delete(_db, _selectedMasterlist.Id);
+                _selectedMasterlist = null; // will reset to active masterlist or all
+                OrderEventBus.NotifyDataRefreshed();
+                LoadData();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not delete masterlist: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+    }
+
+    private void OnNewMasterlistClick(object sender, RoutedEventArgs e)
+    {
+        var dlg = new NewMasterlistDialog(_db, _user)
+        {
+            Owner = Window.GetWindow(this)
+        };
+        if (dlg.ShowDialog() == true)
+        {
+            _selectedMasterlist = null; // Reset to pick up new active masterlist
+            LoadData();
+        }
+    }
+
     private void ApplyFilter()
     {
         if (SearchBox is null || OrdersGrid is null || _allRowVms is null) return;
         var term = SearchBox.Text?.Trim().ToLower() ?? "";
 
         var filtered = _allRowVms.AsEnumerable();
+
+        // 0. Masterlist Filter:
+        if (_selectedMasterlist != null && !_selectedMasterlist.IsAll)
+        {
+            filtered = filtered.Where(r =>
+                (r.MasterlistId.HasValue && r.MasterlistId.Value == _selectedMasterlist.Id) ||
+                (!r.MasterlistId.HasValue && (
+                    (!string.IsNullOrEmpty(_selectedMasterlist.RawName) && string.Equals(r.BatchCode, _selectedMasterlist.RawName, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(_selectedMasterlist.ControlNumber) && string.Equals(r.BatchCode, _selectedMasterlist.ControlNumber, StringComparison.OrdinalIgnoreCase))
+                ))
+            );
+        }
+
+        // Toggle Masterlist column in DataGrid (only visible when 'All masterlists' selected)
+        if (ColMasterlist != null)
+        {
+            ColMasterlist.Visibility = (_selectedMasterlist?.IsAll == true) ? Visibility.Visible : Visibility.Collapsed;
+        }
 
         // 1. PO Status Quick Tab Filters: [ ALL ] [ WAITING TO BUY ] [ BUYING ] [ BOUGHT ] [ ORDER FINISHED ] [ CANCELLED ]
         filtered = _activeFilter switch
@@ -290,11 +483,30 @@ public partial class OrdersPage : Page
         {
             filtered = filtered.Where(r =>
                 (r.OrderNo?.ToLower().Contains(term) ?? false) ||
+                (r.ControlNumber?.ToLower().Contains(term) ?? false) ||
                 (r.Customer?.Name?.ToLower().Contains(term) ?? false) ||
                 (r.BuyingDay?.ToLower().Contains(term) ?? false) ||
                 r.Status.ToString().ToLower().Contains(term) ||
                 r.PaymentStatus.ToString().ToLower().Contains(term));
         }
+
+        // 4. Excess Only Filter
+        if (ExcessOnlyCheck?.IsChecked == true)
+        {
+            filtered = filtered.Where(r => r.HasExcess);
+        }
+
+        // 5. Sorting
+        var sortTag = (SortByCombo?.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "date_desc";
+        filtered = sortTag switch
+        {
+            "client_qty_desc"   => filtered.OrderByDescending(r => r.ClientItemsQty).ThenByDescending(r => r.CreatedAt),
+            "supplier_qty_desc" => filtered.OrderByDescending(r => r.SupplierBoughtQty).ThenByDescending(r => r.CreatedAt),
+            "excess_desc"       => filtered.OrderByDescending(r => r.ExcessQty).ThenByDescending(r => r.CreatedAt),
+            "order_no"          => filtered.OrderBy(r => r.OrderNo),
+            "customer"          => filtered.OrderBy(r => r.Customer?.Name ?? ""),
+            _                   => filtered.OrderByDescending(r => r.CreatedAt)
+        };
 
         _visibleRowVms = filtered.ToList();
         // Force full DataGrid rebind (fixes virtualized panel not re-rendering updated status badges)
@@ -314,6 +526,10 @@ public partial class OrdersPage : Page
         HighlightTab(_activeFilter);
         ApplyFilter();
     }
+
+    private void OnSortChanged(object sender, SelectionChangedEventArgs e) => ApplyFilter();
+
+    private void OnExcessFilterChanged(object sender, RoutedEventArgs e) => ApplyFilter();
 
 
 
@@ -474,6 +690,76 @@ public partial class OrdersPage : Page
 
         MessageBox.Show($"Sent {printedCount} of {totalCount} receipt(s) to printer.",
             "Batch Print", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void OnBulkDeleteOrdersClick(object sender, RoutedEventArgs e)
+    {
+        var selected = _visibleRowVms.Where(r => r.IsSelected).ToList();
+        if (selected.Count == 0) return;
+
+        var allOrderIds = selected.SelectMany(r => r.GroupedOrders.Select(o => o.Id)).Distinct().ToList();
+
+        var confirm = MessageBox.Show(
+            $"Are you sure you want to permanently delete {allOrderIds.Count} selected order(s)?\n\nThis will remove the orders, all items, and payments. This action CANNOT be undone.",
+            "Delete Selected Orders",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (confirm != MessageBoxResult.Yes) return;
+
+        try
+        {
+            var svc = new OrderService(_db);
+            var deletedCount = svc.DeleteBulk(allOrderIds);
+            OrderEventBus.NotifyDataRefreshed();
+            MessageBox.Show($"Successfully deleted {deletedCount} order(s).", "Bulk Delete Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+            LoadData();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to delete orders: {ex.Message}", "Bulk Delete Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void OnDeleteOrderClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not int orderId) return;
+        var vm = _allRowVms.FirstOrDefault(r => r.Id == orderId);
+        if (vm != null)
+            DeleteOrderWithConfirmation(vm);
+    }
+
+    private void DeleteOrderWithConfirmation(OrderRowVm vm)
+    {
+        var orderNo = vm.OrderNo;
+        var confirm = MessageBox.Show(
+            $"Are you sure you want to permanently delete Order {orderNo}?\n\nThis will remove the order, all items, and payments. This cannot be undone.",
+            "Delete Order",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (confirm != MessageBoxResult.Yes) return;
+
+        try
+        {
+            var svc = new OrderService(_db);
+            var orderIds = vm.GroupedOrders.Select(o => o.Id).ToList();
+            int deleted = orderIds.Count > 1 ? svc.DeleteBulk(orderIds) : (svc.Delete(vm.Id) ? 1 : 0);
+            if (deleted > 0)
+            {
+                OrderEventBus.NotifyDataRefreshed();
+                MessageBox.Show($"Order {orderNo} has been deleted.", "Order Deleted", MessageBoxButton.OK, MessageBoxImage.Information);
+                LoadData();
+            }
+            else
+            {
+                MessageBox.Show("Could not find the order to delete.", "Delete Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to delete order: {ex.Message}", "Delete Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void OnViewOrder(object s, RoutedEventArgs e)
@@ -798,7 +1084,18 @@ public partial class OrdersPage : Page
             menu.Items.Add(printChecklistItem);
         }
 
-
+        menu.Items.Add(new Separator());
+        var deleteItem = new MenuItem
+        {
+            Header = "Delete Order",
+            Icon = new MaterialDesignThemes.Wpf.PackIcon { Kind = MaterialDesignThemes.Wpf.PackIconKind.TrashCanOutline, Width = 16, Height = 16, Foreground = new SolidColorBrush(Color.FromRgb(220, 38, 38)) }
+        };
+        deleteItem.Click += (_, _) =>
+        {
+            menu.IsOpen = false;
+            Dispatcher.BeginInvoke(() => DeleteOrderWithConfirmation(vm));
+        };
+        menu.Items.Add(deleteItem);
 
         menu.PlacementTarget = btn;
         menu.IsOpen = true;

@@ -287,28 +287,27 @@
                                 </Grid>
                             </Button>
 
-                            <!-- 2. New Purchase Order -->
+                            <!-- 2. New Order -->
                             <Button x:Name="NavBtn_NewOrder" Style="{StaticResource Pos3DNavMainButtonStyle}" Click="OnNavButtonClick" Tag="NewOrder"
                                     ToolTip="Create a new Purchase Order">
                                 <Grid>
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="26"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                     <md:PackIcon Kind="PlusCircleOutline" Width="18" Height="18" VerticalAlignment="Center"/>
-                                    <TextBlock Grid.Column="1" Text="New Purchase Order" FontSize="12.5" FontWeight="SemiBold" FontFamily="Segoe UI" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                                    <TextBlock Grid.Column="1" Text="New Order" FontSize="12.5" FontWeight="SemiBold" FontFamily="Segoe UI" VerticalAlignment="Center" Margin="6,0,0,0"/>
                                 </Grid>
                             </Button>
 
-                            <!-- 3. Orders -->
-                            <Button x:Name="NavBtn_Orders" Style="{StaticResource Pos3DNavMainButtonStyle}" Click="OnNavButtonClick" Tag="Orders"
-                                    ToolTip="View and manage purchase orders">
+                            <!-- 3. Masterlist -->
+                            <Button x:Name="NavBtn_Masterlist" Style="{StaticResource Pos3DNavMainButtonStyle}" Click="OnNavButtonClick" Tag="Masterlist"
+                                    ToolTip="View and manage masterlist orders">
                                 <Grid>
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="26"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                     <md:PackIcon Kind="ClipboardListOutline" Width="18" Height="18" VerticalAlignment="Center"/>
-                                    <TextBlock Grid.Column="1" Text="Orders" FontSize="12.5" FontWeight="SemiBold" FontFamily="Segoe UI" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                                    <TextBlock Grid.Column="1" Text="Masterlist" FontSize="12.5" FontWeight="SemiBold" FontFamily="Segoe UI" VerticalAlignment="Center" Margin="6,0,0,0"/>
                                 </Grid>
                             </Button>
 
-
-                            <!-- Shopping Workspace -->
+                            <!-- 4. Shopping Workspace -->
                             <Button x:Name="NavBtn_Buying" Style="{StaticResource Pos3DNavMainButtonStyle}" Click="OnNavButtonClick" Tag="Buying"
                                     ToolTip="Shopping workspace — mark items bought or unavailable">
                                 <Grid>
@@ -318,7 +317,7 @@
                                 </Grid>
                             </Button>
 
-                            <!-- Products -->
+                            <!-- 5. Products -->
                             <Button x:Name="NavBtn_Products" Style="{StaticResource Pos3DNavMainButtonStyle}" Click="OnNavButtonClick" Tag="Products"
                                     ToolTip="Manage your product list and prices">
                                 <Grid>
@@ -328,8 +327,8 @@
                                 </Grid>
                             </Button>
 
-                            <!-- Customers -->
-                            <Button x:Name="NavBtn_Customers" Style="{StaticResource Pos3DNavMainButtonStyle}" Click="OnNavButtonClick" Tag="Customers">
+                            <!-- Customers (hidden) -->
+                            <Button x:Name="NavBtn_Customers" Style="{StaticResource Pos3DNavMainButtonStyle}" Click="OnNavButtonClick" Tag="Customers" Visibility="Collapsed">
                                 <Grid>
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="26"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                     <md:PackIcon Kind="AccountMultipleOutline" Width="18" Height="18" VerticalAlignment="Center"/>
@@ -337,8 +336,8 @@
                                 </Grid>
                             </Button>
 
-                            <!-- Stores -->
-                            <Button x:Name="NavBtn_Stores" Style="{StaticResource Pos3DNavMainButtonStyle}" Click="OnNavButtonClick" Tag="Stores"
+                            <!-- Stores (hidden) -->
+                            <Button x:Name="NavBtn_Stores" Style="{StaticResource Pos3DNavMainButtonStyle}" Click="OnNavButtonClick" Tag="Stores" Visibility="Collapsed"
                                     ToolTip="Manage stores / suppliers">
                                 <Grid>
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="26"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
@@ -347,7 +346,7 @@
                                 </Grid>
                             </Button>
 
-                            <!-- Reports -->
+                            <!-- 6. Reports -->
                             <Button x:Name="NavBtn_Reports" Style="{StaticResource Pos3DNavMainButtonStyle}" Click="OnNavButtonClick" Tag="Reports">
                                 <Grid>
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="26"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
@@ -356,7 +355,7 @@
                                 </Grid>
                             </Button>
 
-                            <!-- Settings -->
+                            <!-- 7. Settings -->
                             <Button x:Name="NavBtn_Settings" Style="{StaticResource Pos3DNavMainButtonStyle}" Click="OnNavButtonClick" Tag="Settings">
                                 <Grid>
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="26"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
@@ -540,13 +539,26 @@
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
 
                         <!-- Modern Date Badge -->
-                        <Border Background="{DynamicResource PosPanel}" BorderBrush="{DynamicResource PosBorder}" BorderThickness="1" CornerRadius="8" Padding="10,5" Margin="0,0,12,0">
+                        <Border Background="{DynamicResource PosPanel}" BorderBrush="{DynamicResource PosBorder}" BorderThickness="1" CornerRadius="8" Padding="10,5" Margin="0,0,10,0">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <md:PackIcon Kind="CalendarClockOutline" Width="15" Height="15" Foreground="{DynamicResource PosPrimary}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                                 <TextBlock x:Name="DateLabel" VerticalAlignment="Center"
                                            Foreground="{DynamicResource PosSecondaryText}" FontSize="11.5" FontWeight="SemiBold" FontFamily="Segoe UI"/>
                             </StackPanel>
                         </Border>
+
+                        <!-- Topbar Masterlist Badge (read-only clickable badge -> navigates to Masterlist page) -->
+                        <Border x:Name="MasterlistBadgeBorder" Background="{DynamicResource PosPanel}" BorderBrush="{DynamicResource PosBorder}"
+                                BorderThickness="1" CornerRadius="8" Padding="10,5" Margin="0,0,12,0"
+                                Cursor="Hand" MouseLeftButtonUp="OnMasterlistBadgeClick"
+                                ToolTip="Click to view Masterlist">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <md:PackIcon Kind="FolderOutline" Width="15" Height="15" Foreground="{DynamicResource PosPrimary}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBlock x:Name="MasterlistBadgeLabel" Text="Masterlist: Active" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource PosSecondaryText}" FontSize="11.5" FontWeight="SemiBold" FontFamily="Segoe UI"/>
+                            </StackPanel>
+                        </Border>
+
                         <!-- Modern Theme Toggle -->
                         <Button Style="{StaticResource Pos3DSecondaryBtn}" MinWidth="36" MinHeight="36" Padding="6"
                                 ToolTip="Toggle Theme (Light / Dark)" Click="OnThemeToggle" Cursor="Hand">

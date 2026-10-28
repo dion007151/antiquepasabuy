@@ -30,19 +30,71 @@
 
     <Grid Margin="18,14">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>  <!-- Header + Actions -->
-            <RowDefinition Height="Auto"/>  <!-- Filter Tabs + Search -->
-            <RowDefinition Height="Auto"/>  <!-- Bulk Selection Panel -->
-            <RowDefinition Height="*"/>     <!-- DataGrid -->
+            <RowDefinition Height="Auto"/>  <!-- Row 0: Masterlist Bar -->
+            <RowDefinition Height="Auto"/>  <!-- Row 1: Header + Actions -->
+            <RowDefinition Height="Auto"/>  <!-- Row 2: Filter Tabs + Search -->
+            <RowDefinition Height="Auto"/>  <!-- Row 3: Bulk Selection Panel -->
+            <RowDefinition Height="*"/>     <!-- Row 4: DataGrid -->
         </Grid.RowDefinitions>
 
-        <!-- ══ ROW 0: HEADER + ACTIONS ══════════════════════════════════════════ -->
-        <Grid Grid.Row="0" Margin="0,0,0,12">
+        <!-- ══ ROW 0: MASTERLIST BAR ═════════════════════════════════════════════ -->
+        <Border Grid.Row="0" Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}"
+                BorderThickness="1" CornerRadius="10" Padding="14,10" Margin="0,0,0,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Dropdown + Quick Delete -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
+                    <TextBlock Text="Masterlist:" FontWeight="SemiBold" FontSize="13"
+                               Foreground="{DynamicResource PosSecondaryText}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox x:Name="MasterlistCombo" Width="210" Height="34"
+                              SelectionChanged="OnMasterlistSelectionChanged"
+                              FontSize="13" FontWeight="SemiBold"
+                              Foreground="{DynamicResource PosPrimaryText}"/>
+                    <Button x:Name="DeleteCurrentMasterlistBtn" Click="OnDeleteCurrentMasterlistClick"
+                            Style="{StaticResource Pos3DSecondaryBtn}" Width="34" Height="34" Padding="0" Margin="8,0,0,0"
+                            ToolTip="Delete selected masterlist" Cursor="Hand" Visibility="Collapsed">
+                        <md:PackIcon Kind="TrashCanOutline" Width="16" Height="16" Foreground="#DC2626"/>
+                    </Button>
+                </StackPanel>
+
+                <!-- Info line -->
+                <TextBlock x:Name="MasterlistInfoLine" Grid.Column="1" VerticalAlignment="Center"
+                           FontSize="12" Foreground="{DynamicResource PosSecondaryText}"
+                           TextTrimming="CharacterEllipsis"/>
+
+                <!-- Action Buttons: Organize & + New masterlist -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="OrganizeMasterlistBtn" Click="OnOrganizeMasterlistClick"
+                            Style="{StaticResource Pos3DSecondaryBtn}" Height="34" Padding="12,0" Margin="0,0,8,0"
+                            ToolTip="Find, search, and organize all masterlists like files">
+                        <StackPanel Orientation="Horizontal">
+                            <md:PackIcon Kind="FolderSettingsOutline" Width="15" Height="15" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Organize" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="NewMasterlistBtn" Click="OnNewMasterlistClick"
+                            Style="{StaticResource Pos3DSecondaryBtn}" Height="34" Padding="14,0">
+                        <StackPanel Orientation="Horizontal">
+                            <md:PackIcon Kind="FolderPlusOutline" Width="15" Height="15" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="+ New masterlist" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ══ ROW 1: HEADER + ACTIONS ══════════════════════════════════════════ -->
+        <Grid Grid.Row="1" Margin="0,0,0,12">
             <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center">
-                <TextBlock x:Name="PageHeading" Text="Purchase Orders" FontSize="22" FontWeight="Bold"
+                <TextBlock x:Name="PageHeading" Text="Masterlist" FontSize="22" FontWeight="Bold"
                            Foreground="{DynamicResource PosPrimaryText}" FontFamily="Segoe UI"/>
                 <TextBlock x:Name="PageSubheading"
-                           Text="Digital masterlist of all customer purchase orders and fulfillment status"
+                           Text="Customer purchase orders in the selected masterlist"
                            Foreground="{DynamicResource PosSecondaryText}" FontSize="12" FontFamily="Segoe UI" Margin="0,2,0,0"/>
             </StackPanel>
 
@@ -55,7 +107,7 @@
                     </StackPanel>
                 </Button>
                 <Button Click="OnRefreshClick" Style="{StaticResource Pos3DSecondaryBtn}"
-                        Width="38" Height="38" Padding="0" ToolTip="Refresh Purchase Orders">
+                        Width="38" Height="38" Padding="0" ToolTip="Refresh Masterlist Orders">
                     <md:PackIcon Kind="Refresh" Width="17" Height="17" Foreground="{DynamicResource PosSecondaryText}"/>
                 </Button>
             </StackPanel>
@@ -63,7 +115,7 @@
 
 
         <!-- ══ ROW 2: FILTER TABS + SEARCH ══════════════════════════════════════ -->
-        <Border Grid.Row="1" Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}"
+        <Border Grid.Row="2" Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}"
                 BorderThickness="1" CornerRadius="10" Padding="8,6" Margin="0,0,0,8">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -82,9 +134,25 @@
                     <Button x:Name="TabCancelled" Content="Cancelled"      Tag="cancelled"      Click="OnTabClick" Style="{StaticResource Pos3DFilterBtn}"/>
                 </StackPanel>
 
+                <!-- Sort & Excess Controls -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="10,0">
+                    <TextBlock Text="Sort:" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource PosSecondaryText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <ComboBox x:Name="SortByCombo" Width="175" Height="32" SelectionChanged="OnSortChanged"
+                              FontSize="11.5" FontWeight="SemiBold" VerticalAlignment="Center">
+                        <ComboBoxItem Content="Newest Date" IsSelected="True" Tag="date_desc"/>
+                        <ComboBoxItem Content="Client Orders (High→Low)" Tag="client_qty_desc"/>
+                        <ComboBoxItem Content="Supplier Bought (High→Low)" Tag="supplier_qty_desc"/>
+                        <ComboBoxItem Content="Excess Items First" Tag="excess_desc"/>
+                        <ComboBoxItem Content="PO / Control #" Tag="order_no"/>
+                        <ComboBoxItem Content="Customer Name" Tag="customer"/>
+                    </ComboBox>
+                    <CheckBox x:Name="ExcessOnlyCheck" Content="Excess Only" Checked="OnExcessFilterChanged" Unchecked="OnExcessFilterChanged"
+                              Margin="10,0,0,0" VerticalAlignment="Center" FontSize="11.5" FontWeight="Bold" Foreground="#D97706" Cursor="Hand"/>
+                </StackPanel>
+
                 <!-- Search Box -->
                 <Border Grid.Column="2" Background="{DynamicResource PosBackground}" CornerRadius="8"
-                        BorderBrush="{DynamicResource PosBorder}" BorderThickness="1" Padding="10,5" Margin="12,0,0,0" MinWidth="260">
+                        BorderBrush="{DynamicResource PosBorder}" BorderThickness="1" Padding="10,5" Margin="8,0,0,0" MinWidth="240">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -94,7 +162,7 @@
                         <md:PackIcon Kind="Magnify" Width="16" Height="16" Foreground="{DynamicResource PosMutedText}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBox x:Name="SearchBox" Grid.Column="1" BorderThickness="0" FontSize="12" FontFamily="Segoe UI"
                                  Foreground="{DynamicResource PosPrimaryText}" CaretBrush="{DynamicResource PosPrimary}"
-                                 md:HintAssist.Hint="Search orders, customers..."
+                                 md:HintAssist.Hint="Search orders, customers, ctrl #..."
                                  md:TextFieldAssist.DecorationVisibility="Hidden"
                                  TextChanged="OnSearch"/>
                         <Button Grid.Column="2" Content="&#x2715;" Click="OnClearSearch"
@@ -106,7 +174,7 @@
         </Border>
 
         <!-- ══ ROW 3: BULK SELECTION TOOLBAR ════════════════════════════════════ -->
-        <Border x:Name="BulkSelectionPanel" Grid.Row="2" Background="{DynamicResource PosSurface}" CornerRadius="10"
+        <Border x:Name="BulkSelectionPanel" Grid.Row="3" Background="{DynamicResource PosSurface}" CornerRadius="10"
                 BorderBrush="{DynamicResource PosBorder}" BorderThickness="1" Padding="10,6" Margin="0,0,0,8"
                 Visibility="Collapsed">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -131,11 +199,17 @@
                         <TextBlock Text="Print" FontSize="11" FontWeight="SemiBold"/>
                     </StackPanel>
                 </Button>
+                <Button x:Name="BulkDeleteBtn" Click="OnBulkDeleteOrdersClick" Style="{StaticResource Pos3DTableDangerBtn}" Height="30" Padding="12,0" Margin="0,0,6,0" ToolTip="Permanently delete selected orders">
+                    <StackPanel Orientation="Horizontal">
+                        <md:PackIcon Kind="TrashCanOutline" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                        <TextBlock Text="Delete Selected" FontSize="11" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Button>
             </StackPanel>
         </Border>
 
-        <!-- == ROW 3: ORDERS DATAGRID == -->
-        <Border Grid.Row="3" Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}"
+        <!-- == ROW 4: ORDERS DATAGRID == -->
+        <Border Grid.Row="4" Background="{DynamicResource PosSurface}" BorderBrush="{DynamicResource PosBorder}"
                 BorderThickness="1" CornerRadius="10" Padding="2">
             <Grid>
                 <DataGrid x:Name="OrdersGrid"
@@ -181,13 +255,15 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
-                        <!-- PO # -->
-                        <DataGridTemplateColumn Header="PO #" Width="110" SortMemberPath="OrderNo">
+                        <!-- PO / Control # -->
+                        <DataGridTemplateColumn Header="PO / Control #" Width="135" SortMemberPath="OrderNo">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <StackPanel VerticalAlignment="Center" Margin="4,0">
+                                    <StackPanel VerticalAlignment="Center" Margin="4,2">
                                         <TextBlock Text="{Binding OrderNo}" FontWeight="Bold" FontSize="12"
                                                    Foreground="{DynamicResource PosPrimary}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding ControlNumber}" FontSize="10.5"
+                                                   Foreground="{DynamicResource PosSecondaryText}" TextTrimming="CharacterEllipsis" Margin="0,1,0,0"/>
                                     </StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
@@ -217,8 +293,21 @@
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
 
-                        <!-- Items -->
-                        <DataGridTemplateColumn Header="Items" Width="68" SortMemberPath="ItemCount">
+                        <!-- Masterlist (only visible when 'All masterlists' selected) -->
+                        <DataGridTemplateColumn x:Name="ColMasterlist" Header="Masterlist" Width="110" Visibility="Collapsed" SortMemberPath="BatchCode">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource PosPanel}" CornerRadius="6" Padding="6,2"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding BatchCode}" FontWeight="SemiBold" FontSize="11"
+                                                   Foreground="{DynamicResource PosPrimary}" HorizontalAlignment="Center"/>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Items & Quantities (Client vs Supplier & Excess) -->
+                        <DataGridTemplateColumn Header="Client / Supplier Qty" Width="150" SortMemberPath="ClientItemsQty">
                             <DataGridTemplateColumn.HeaderStyle>
                                 <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource MaterialDesignDataGridColumnHeader}">
                                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -226,11 +315,35 @@
                             </DataGridTemplateColumn.HeaderStyle>
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Border Background="{DynamicResource PosPanel}" CornerRadius="6" Padding="8,2"
-                                            HorizontalAlignment="Center" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding ItemCount}" FontWeight="Bold" FontSize="12"
-                                                   HorizontalAlignment="Center" Foreground="{DynamicResource PosPrimary}"/>
-                                    </Border>
+                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="4,2">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <Border Background="#E0E7FF" CornerRadius="4" Padding="5,1" Margin="0,0,4,0" ToolTip="Client Ordered Quantity">
+                                                <TextBlock Text="{Binding ClientItemsQty, StringFormat={}{0:0.##} cli}" FontWeight="Bold" FontSize="11" Foreground="#3730A3"/>
+                                            </Border>
+                                            <Border Background="#DCFCE7" CornerRadius="4" Padding="5,1" ToolTip="Supplier Bought Quantity">
+                                                <TextBlock Text="{Binding SupplierBoughtQty, StringFormat={}{0:0.##} sup}" FontWeight="Bold" FontSize="11" Foreground="#166534"/>
+                                            </Border>
+                                        </StackPanel>
+                                        <!-- Highlight Excess -->
+                                        <Border CornerRadius="4" Padding="6,1.5" Margin="0,3,0,0" HorizontalAlignment="Center"
+                                                Background="#FEF3C7" BorderBrush="#F59E0B" BorderThickness="1"
+                                                ToolTip="Excess items purchased above client order quantity">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasExcess}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <StackPanel Orientation="Horizontal">
+                                                <md:PackIcon Kind="AlertCircleOutline" Width="11" Height="11" Foreground="#B45309" VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                                <TextBlock Text="{Binding ExcessDisplay}" FontWeight="Bold" FontSize="10" Foreground="#B45309"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
@@ -307,16 +420,22 @@
                         </DataGridTemplateColumn>
 
                         <!-- Actions -->
-                        <DataGridTemplateColumn Header="" Width="Auto" MinWidth="100">
+                        <DataGridTemplateColumn Header="" Width="Auto" MinWidth="135">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0">
                                         <Button Tag="{Binding Id}" Style="{StaticResource Pos3DTableActionBtn}"
-                                                Margin="0,0,6,0" Click="OnViewOrder" ToolTip="View order details">
+                                                Margin="0,0,4,0" Click="OnViewOrder" ToolTip="View order details">
                                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <md:PackIcon Kind="EyeOutline" Width="13" Height="13" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                                                <TextBlock Text="VIEW" FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
+                                                <md:PackIcon Kind="EyeOutline" Width="13" Height="13" VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                                <TextBlock Text="VIEW" FontSize="10.5" FontWeight="Bold" VerticalAlignment="Center"/>
                                             </StackPanel>
+                                        </Button>
+                                        <Button Tag="{Binding Id}" Click="OnDeleteOrderClick"
+                                                Style="{StaticResource Pos3DTableDangerBtn}"
+                                                Width="28" Height="28" Padding="0" Margin="0,0,4,0"
+                                                ToolTip="Delete order">
+                                            <md:PackIcon Kind="TrashCanOutline" Width="13" Height="13" VerticalAlignment="Center"/>
                                         </Button>
                                         <Button Tag="{Binding Id}" Click="OnMoreMenuClick"
                                                 Style="{StaticResource Pos3DTableMoreBtn}" ToolTip="More options"/>

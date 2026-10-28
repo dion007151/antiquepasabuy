@@ -244,7 +244,7 @@
         </Grid>
 
         <!-- ══ ROW 1: KPI SUMMARY CARDS RIBBON ═════════════════════════════════ -->
-        <UniformGrid Grid.Row="1" Columns="5" Margin="0,0,0,12">
+        <UniformGrid Grid.Row="1" Columns="6" Margin="0,0,0,12">
             <!-- Stores Pillar -->
             <Border Style="{StaticResource KpiCard}" Margin="0,0,8,0">
                 <StackPanel>
@@ -294,6 +294,19 @@
                         <TextBlock Text="TOTAL QTY" FontSize="9.5" FontWeight="Bold" Foreground="{DynamicResource PosSecondaryText}" VerticalAlignment="Center"/>
                     </StackPanel>
                     <TextBlock x:Name="TotalQtyLabel" Text="0 units" FontSize="18" FontWeight="Black" Foreground="#16A34A" FontFamily="Segoe UI"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Excess Units Pillar -->
+            <Border Style="{StaticResource KpiCard}" Margin="0,0,8,0">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <Border Background="#FEF3C7" CornerRadius="6" Padding="5" Margin="0,0,8,0">
+                            <md:PackIcon Kind="AlertCircleOutline" Width="14" Height="14" Foreground="#D97706"/>
+                        </Border>
+                        <TextBlock Text="EXCESS UNITS" FontSize="9.5" FontWeight="Bold" Foreground="{DynamicResource PosSecondaryText}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock x:Name="ExcessUnitsLabel" Text="0 excess" FontSize="18" FontWeight="Black" Foreground="#D97706" FontFamily="Segoe UI"/>
                 </StackPanel>
             </Border>
 
@@ -373,6 +386,21 @@
                                 <TextBlock Text="Group by Store" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11.5"/>
                             </StackPanel>
                         </Button>
+
+                        <!-- Sort By ComboBox -->
+                        <ComboBox x:Name="SortFilterCombo" Width="165" Height="36" Margin="0,0,8,0"
+                                  Style="{StaticResource PosFilterComboBoxStyle}"
+                                  SelectionChanged="OnBuyingSortChanged">
+                            <ComboBoxItem Content="Default (Grouped)" IsSelected="True" Tag="default"/>
+                            <ComboBoxItem Content="Client Qty (High→Low)" Tag="client_qty_desc"/>
+                            <ComboBoxItem Content="Supplier Qty (High→Low)" Tag="supplier_qty_desc"/>
+                            <ComboBoxItem Content="Excess First (High→Low)" Tag="excess_desc"/>
+                            <ComboBoxItem Content="Product Name (A-Z)" Tag="name_asc"/>
+                        </ComboBox>
+
+                        <!-- Excess Only Checkbox -->
+                        <CheckBox x:Name="ExcessOnlyCheck" Content="Excess Only" Checked="OnExcessFilterToggled" Unchecked="OnExcessFilterToggled"
+                                  Margin="0,0,8,0" VerticalAlignment="Center" FontSize="11.5" FontWeight="Bold" Foreground="#D97706" Cursor="Hand"/>
                     </WrapPanel>
 
                     <!-- Real-Time Debounced Search Box -->
@@ -560,25 +588,50 @@
                         </DataGridTemplateColumn>
 
                         
-                        <!-- 3. Quantity Column -->
-                        <DataGridTextColumn Header="Qty" Binding="{Binding QtyDisplay}" Width="60">
-                            <DataGridTextColumn.ElementStyle>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="VerticalAlignment" Value="Center"/>
-                                    <Setter Property="HorizontalAlignment" Value="Center"/>
-                                    <Setter Property="FontWeight" Value="Bold"/>
-                                    <Setter Property="Foreground" Value="{DynamicResource PosPrimaryText}"/>
+                        <!-- 3. Quantity Column (Client vs Supplier & Excess Highlight) -->
+                        <DataGridTemplateColumn Header="Client / Supplier Qty" Width="150" SortMemberPath="ClientQty">
+                            <DataGridTemplateColumn.HeaderStyle>
+                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource MaterialDesignDataGridColumnHeader}">
+                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                 </Style>
-                            </DataGridTextColumn.ElementStyle>
-                        </DataGridTextColumn>
+                            </DataGridTemplateColumn.HeaderStyle>
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="2,2">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <Border Background="#E0E7FF" CornerRadius="4" Padding="5,1" Margin="0,0,4,0" ToolTip="Client Ordered Quantity">
+                                                <TextBlock Text="{Binding ClientQty, StringFormat={}{0:0.##} cli}" FontWeight="Bold" FontSize="11" Foreground="#3730A3"/>
+                                            </Border>
+                                            <Border Background="#DCFCE7" CornerRadius="4" Padding="5,1" ToolTip="Supplier Bought Quantity">
+                                                <TextBlock Text="{Binding SupplierQty, StringFormat={}{0:0.##} sup}" FontWeight="Bold" FontSize="11" Foreground="#166534"/>
+                                            </Border>
+                                        </StackPanel>
+                                        <!-- Highlight Excess -->
+                                        <Border CornerRadius="4" Padding="5,1.5" Margin="0,2,0,0" HorizontalAlignment="Center"
+                                                Background="#FEF3C7" BorderBrush="#F59E0B" BorderThickness="1"
+                                                Visibility="{Binding HasExcess, Converter={StaticResource BoolToVis}}"
+                                                ToolTip="Excess units purchased above client order quantity">
+                                            <StackPanel Orientation="Horizontal">
+                                                <md:PackIcon Kind="AlertCircleOutline" Width="11" Height="11" Foreground="#B45309" VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                                <TextBlock Text="{Binding ExcessDisplay}" FontWeight="Bold" FontSize="10" Foreground="#B45309"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
 
                         <!-- 4. Customer & PO # Column -->
-                        <DataGridTemplateColumn Header="Customer / PO #" Width="135">
+                        <DataGridTemplateColumn Header="Customer / PO #" Width="145">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="{Binding CustomerDisplay}" FontWeight="SemiBold" FontSize="11.5" Foreground="{DynamicResource PosPrimaryText}" TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="{Binding OrderDateDisplay}" FontSize="10" Foreground="{DynamicResource PosMutedText}" Margin="0,1,0,0"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,1,0,0">
+                                            <TextBlock Text="{Binding ControlNumber}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource PosPrimary}" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text=" • " FontSize="10" Foreground="{DynamicResource PosMutedText}"/>
+                                            <TextBlock Text="{Binding OrderDateDisplay}" FontSize="10" Foreground="{DynamicResource PosMutedText}"/>
+                                        </StackPanel>
                                     </StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>

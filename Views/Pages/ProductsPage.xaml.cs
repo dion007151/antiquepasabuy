@@ -139,9 +139,13 @@ public partial class ProductsPage : Page
                 window.PreviewKeyDown -= OnWindowPreviewKeyDown;
                 window.PreviewKeyDown += OnWindowPreviewKeyDown;
             }
+
+            OrderEventBus.DataRefreshed -= OnExternalDataRefreshed;
+            OrderEventBus.DataRefreshed += OnExternalDataRefreshed;
         };
         Unloaded += (_, _) =>
         {
+            OrderEventBus.DataRefreshed -= OnExternalDataRefreshed;
             var window = Window.GetWindow(this);
             if (window != null)
             {
@@ -149,6 +153,8 @@ public partial class ProductsPage : Page
             }
         };
     }
+
+    private void OnExternalDataRefreshed() => Dispatcher.InvokeAsync(LoadData);
 
     private async void LoadData()
     {

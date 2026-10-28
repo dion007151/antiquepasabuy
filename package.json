@@ -1,0 +1,11 @@
+{
+  "name": "antiquepasabuy-pos-suite",
+  "version": "2.1.0",
+  "private": true,
+  "description": "Antique Pasabuy POS & Restaurant Web Application",
+  "scripts": {
+    "dev": "npm --prefix web run dev",
+    "build": "npm --prefix web run build",
+    "preview": "npm --prefix web run preview"
+  }
+}

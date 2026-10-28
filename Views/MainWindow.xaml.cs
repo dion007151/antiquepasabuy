@@ -69,15 +69,44 @@ public partial class MainWindow : Window
         RegisterNavButtons();
         UpdateSidebarBranding();
 
+        OrderEventBus.DataRefreshed += () => Dispatcher.Invoke(UpdateMasterlistBadge);
+
         if (AntiquePasabuyPOS.Services.BusinessProfileService.IsAngelitos)
             Navigate("RestoDashboard");
         else
             Navigate("Dashboard");
+
+        UpdateMasterlistBadge();
     }
 
-    // ActiveBatchBadge removed in 2.3; batch display is in Settings only.
+    public void UpdateMasterlistBadge()
+    {
+        if (MasterlistBadgeBorder == null || MasterlistBadgeLabel == null) return;
 
-    // OnSwitchActiveBatch removed in 2.3; batch management moved to Settings page.
+        bool isPasabuy = !AntiquePasabuyPOS.Services.BusinessProfileService.IsAngelitos;
+        if (!isPasabuy)
+        {
+            MasterlistBadgeBorder.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        MasterlistBadgeBorder.Visibility = Visibility.Visible;
+        using var db = new AppDbContext();
+        var active = MasterlistService.GetActive(db);
+        if (active != null)
+        {
+            MasterlistBadgeLabel.Text = $"Masterlist: {active.Name}";
+        }
+        else
+        {
+            MasterlistBadgeLabel.Text = "Masterlist: (none)";
+        }
+    }
+
+    private void OnMasterlistBadgeClick(object sender, MouseButtonEventArgs e)
+    {
+        Navigate("Masterlist");
+    }
 
     private void OnProfileChanged(BusinessProfile profile)
     {
@@ -86,6 +115,7 @@ public partial class MainWindow : Window
             _pageCache.Clear();
             RegisterNavButtons();
             UpdateSidebarBranding();
+            UpdateMasterlistBadge();
 
             if (AntiquePasabuyPOS.Services.BusinessProfileService.IsAngelitos)
                 Navigate("RestoDashboard");
@@ -180,7 +210,11 @@ public partial class MainWindow : Window
             // Antique Pasabuy Navigation
             if (NavBtn_Dashboard != null)    _navButtons["Dashboard"]   = NavBtn_Dashboard;
             if (NavBtn_NewOrder != null)     _navButtons["NewOrder"]    = NavBtn_NewOrder;
-            if (NavBtn_Orders != null)       _navButtons["Orders"]      = NavBtn_Orders;
+            if (NavBtn_Masterlist != null)
+            {
+                _navButtons["Masterlist"] = NavBtn_Masterlist;
+                _navButtons["Orders"]     = NavBtn_Masterlist;
+            }
             if (NavBtn_Buying != null)       _navButtons["Buying"]      = NavBtn_Buying;
             if (NavBtn_Products != null)     _navButtons["Products"]    = NavBtn_Products;
             if (NavBtn_Stores != null)       _navButtons["Stores"]      = NavBtn_Stores;
@@ -189,11 +223,11 @@ public partial class MainWindow : Window
             if (NavBtn_Settings != null)     _navButtons["Settings"]    = NavBtn_Settings;
 
             // Aliases so deep-links highlight the right nav button
-            if (NavBtn_Orders != null)
+            if (NavBtn_Masterlist != null)
             {
-                _navButtons["PendingOrders"]  = NavBtn_Orders;
-                _navButtons["CompletedOrders"]= NavBtn_Orders;
-                _navButtons["BoughtOrders"]   = NavBtn_Orders;
+                _navButtons["PendingOrders"]  = NavBtn_Masterlist;
+                _navButtons["CompletedOrders"]= NavBtn_Masterlist;
+                _navButtons["BoughtOrders"]   = NavBtn_Masterlist;
             }
             if (NavBtn_Reports != null)
             {
@@ -230,6 +264,7 @@ public partial class MainWindow : Window
         }
 
         UpdateTopbar(id);
+        UpdateMasterlistBadge();
         LoadPage(id);
     }
 
@@ -240,11 +275,12 @@ public partial class MainWindow : Window
         var labels = new Dictionary<string, (string title, string bc)>(StringComparer.OrdinalIgnoreCase)
         {
             ["Dashboard"]         = ("Dashboard",                                  "Home / Dashboard"),
-            ["NewOrder"]          = ("New Purchase Order",                         "Orders / New"),
-            ["Orders"]            = ("Purchase Orders",                            "Orders"),
-            ["PendingOrders"]     = ("Purchase Orders",                            "Orders"),
-            ["CompletedOrders"]   = ("Purchase Orders",                            "Orders"),
-            ["BoughtOrders"]      = ("Purchase Orders",                            "Orders"),
+            ["NewOrder"]          = ("New Order",                                  "Masterlist / New Order"),
+            ["Masterlist"]        = ("Masterlist",                                 "Home / Masterlist"),
+            ["Orders"]            = ("Masterlist",                                 "Home / Masterlist"),
+            ["PendingOrders"]     = ("Masterlist",                                 "Home / Masterlist"),
+            ["CompletedOrders"]   = ("Masterlist",                                 "Home / Masterlist"),
+            ["BoughtOrders"]      = ("Masterlist",                                 "Home / Masterlist"),
             ["Customers"]         = ("Customers",                                  "Customers"),
             ["SalesReport"]       = ("Reports",                                    "Reports"),
             ["BuyingReport"]      = ("Reports",                                    "Reports"),
@@ -285,7 +321,7 @@ public partial class MainWindow : Window
     private void LoadPage(string id)
     {
         // Parameterized filter routes (PendingOrders, BoughtOrders, CompletedOrders, SalesReport, etc.) or NewOrder are created fresh
-        bool isCacheable = id is "Dashboard" or "Orders" or "Buying" or "Customers" or "Stores" or "Products" or "Reports" or "Settings"
+        bool isCacheable = id is "Dashboard" or "Masterlist" or "Orders" or "Buying" or "Customers" or "Stores" or "Products" or "Reports" or "Settings"
                                or "RestoDashboard" or "RestoSales" or "RestoTables" or "RestoOrders" or "RestoKitchen" or "RestoMenu" or "RestoInventory" or "RestoCustomers" or "RestoStaff";
 
         Page? page = null;
@@ -299,8 +335,8 @@ public partial class MainWindow : Window
             {
                 // Pasabuy pages
                 "Dashboard"              => new DashboardPage(_db, _user, Navigate),
-                "NewOrder"               => new NewOrderPage(_db, _user, onSuccess: () => Navigate("Orders")),
-                "Orders"                 => new OrdersPage(_db, _user, Navigate),
+                "NewOrder"               => new NewOrderPage(_db, _user, onSuccess: () => Navigate("Masterlist")),
+                "Masterlist" or "Orders" => new OrdersPage(_db, _user, Navigate),
                 "Buying"                 => new BuyingListPage(_db, _user, Navigate),
                 "PendingOrders"          => new OrdersPage(_db, _user, Navigate, initialFilter: OrderStatus.WAITING_CONFIRMATION),
                 "BoughtOrders"           => new OrdersPage(_db, _user, Navigate, initialFilter: OrderStatus.BOUGHT),

@@ -22,6 +22,7 @@ public class OrderService(AppDbContext db)
         var q = db.Orders
             .AsNoTracking()
             .Include(o => o.Customer)
+            .Include(o => o.Masterlist)
             .Include(o => o.Items)
             .Include(o => o.Payments)
             .Include(o => o.Delivery)
@@ -43,7 +44,7 @@ public class OrderService(AppDbContext db)
 
     public Order? GetById(int id)
         => db.Orders.AsNoTracking()
-                    .Include(o => o.Customer).Include(o => o.Items)
+                    .Include(o => o.Customer).Include(o => o.Masterlist).Include(o => o.Items)
                     .Include(o => o.Payments).Include(o => o.Delivery)
                     .FirstOrDefault(o => o.Id == id);
 
@@ -63,11 +64,13 @@ public class OrderService(AppDbContext db)
         string? batchCode = null)
     {
         var no = GetNextOrderNo(batchCode);
+        var activeMl = db.Masterlists.FirstOrDefault(m => m.Status == "Active");
         var order = new Order
         {
             BusinessId = BusinessProfileService.ActiveProfile.Id,
             OrderNo = no,
             CustomerId = customerId,
+            MasterlistId = activeMl?.Id,
             Status = status,
             DeliveryType = type,
             Address = address,
@@ -100,6 +103,13 @@ public class OrderService(AppDbContext db)
                 ? itemManualFee
                 : prodMatch?.ManualFeeAmount;
 
+            var cleanStore = string.IsNullOrWhiteSpace(store) ? "General" : store.Trim();
+            var isFromStock = (prodMatch != null && prodMatch.IsStockItem)
+                           || string.Equals(cleanStore, "On hand", StringComparison.OrdinalIgnoreCase);
+
+            if (isFromStock && cleanStore == "General")
+                cleanStore = "On hand";
+
             var orderItem = new OrderItem
             {
                 OrderId = order.Id,
@@ -107,10 +117,13 @@ public class OrderService(AppDbContext db)
                 Qty = qty,
                 Unit = string.IsNullOrWhiteSpace(unit) ? "pc" : unit.Trim(),
                 EstimatedPrice = price,
+                ActualPrice = isFromStock ? price : null,
+                PurchasedQty = isFromStock ? qty : null,
+                PurchaseDate = isFromStock ? DateTime.Now : null,
                 CostPrice = cost,
-                Store = string.IsNullOrWhiteSpace(store) ? "General" : store.Trim(),
+                Store = cleanStore,
                 Notes = itemNotes,
-                Status = ItemStatus.Pending,
+                Status = isFromStock ? ItemStatus.BOUGHT_FROM_STOCK : ItemStatus.Pending,
                 FeeType = finalFeeType,
                 ManualFeeAmount = finalManualFee,
                 IsFeeExempt = finalFeeType == ProductFeeType.NONE,
@@ -120,6 +133,19 @@ public class OrderService(AppDbContext db)
             db.OrderItems.Add(orderItem);
         }
         db.SaveChanges();
+
+        // Immediately deduct inventory for all items fulfilled from on-hand stock
+        var stockSvc = new StockService(db);
+        foreach (var item in order.Items.Where(i => i.Status == ItemStatus.BOUGHT_FROM_STOCK))
+        {
+            stockSvc.RecordSaleFromStock(item.ProductName, item.Qty, order.OrderNo, item.Id);
+        }
+
+        // Advance order progress if stock items were fulfilled
+        if (order.Items.Any(i => i.Status == ItemStatus.BOUGHT_FROM_STOCK))
+        {
+            new BuyingStateService(db).EvaluateOrderBuyingProgress(order.Id);
+        }
 
         OrderEventBus.NotifyOrderCreated(order.Id);
         OrderEventBus.NotifyDataRefreshed();
@@ -156,57 +182,13 @@ public class OrderService(AppDbContext db)
         decimal deliveryFee = 0m,
         decimal discount = 0m,
         int? createdBy = null,
-        OrderStatus status = OrderStatus.Pending,
+        OrderStatus status = OrderStatus.WAITING_CONFIRMATION,
         string buyingDay = "Wednesday",
         string? preferredStore = null,
         string? batchCode = null)
     {
-        var no = GetNextOrderNo(batchCode);
-        var order = new Order
-        {
-            BusinessId = BusinessProfileService.ActiveProfile.Id,
-            OrderNo = no,
-            CustomerId = customerId,
-            Status = status,
-            DeliveryType = type,
-            Address = address,
-            Notes = notes,
-            BuyingDay = string.IsNullOrWhiteSpace(buyingDay) ? "Wednesday" : buyingDay,
-            PreferredStore = preferredStore,
-            BatchCode = string.IsNullOrWhiteSpace(batchCode) ? null : batchCode.Trim().ToUpperInvariant(),
-            ServiceFee = serviceFee,
-            DeliveryFee = deliveryFee,
-            Discount = discount,
-            CreatedBy = createdBy,
-            CreatedAt = DateTime.Now,
-            UpdatedAt = DateTime.Now
-        };
-        db.Orders.Add(order);
-        db.SaveChanges();
-
-        foreach (var (name, qty, unit, price, store) in items)
-        {
-            if (string.IsNullOrWhiteSpace(name) || name.Trim() == "-" || qty <= 0) continue;
-            var cleanName = name.Trim();
-            var prodMatch = db.Products.AsNoTracking().FirstOrDefault(p => p.Name.ToLower() == cleanName.ToLower());
-            var cost = prodMatch?.CostPrice;
-
-            var orderItem = new OrderItem
-            {
-                OrderId = order.Id,
-                ProductName = cleanName,
-                Qty = qty,
-                Unit = string.IsNullOrWhiteSpace(unit) ? "pc" : unit.Trim(),
-                EstimatedPrice = price,
-                CostPrice = cost,
-                Store = string.IsNullOrWhiteSpace(store) ? "General" : store.Trim(),
-                Status = ItemStatus.Pending
-            };
-            order.Items.Add(orderItem);
-            db.OrderItems.Add(orderItem);
-        }
-        db.SaveChanges();
-        return order;
+        var mapped = items.Select(i => (i.name, i.qty, i.unit, i.price, i.store, (string?)null, ProductFeeType.STANDARD, (decimal?)null)).ToList();
+        return Create(customerId, mapped, type, address, notes, serviceFee, deliveryFee, discount, createdBy, status, buyingDay, preferredStore, batchCode);
     }
 
     // Overload for backward compatibility with 4-tuple items
@@ -295,6 +277,8 @@ public class OrderService(AppDbContext db)
             .AsNoTracking()
             .Include(i => i.Order)
                 .ThenInclude(o => o!.Customer)
+            .Include(i => i.Order)
+                .ThenInclude(o => o!.Masterlist)
             .Where(i => i.Order != null && (i.Order.BusinessId == "ANTIQUE_PASABUY" || string.IsNullOrEmpty(i.Order.BusinessId))
                         && i.Order.Status != OrderStatus.CANCELLED
                         && i.Status != ItemStatus.Cancelled
@@ -471,6 +455,18 @@ public class OrderService(AppDbContext db)
         db.Orders.Remove(order);
         db.SaveChanges();
         return true;
+    }
+
+    public int DeleteBulk(IEnumerable<int> ids)
+    {
+        var list = ids.Distinct().ToList();
+        if (list.Count == 0) return 0;
+        var orders = db.Orders.Include(o => o.Items).Include(o => o.Payments).Include(o => o.Delivery)
+                              .Where(o => list.Contains(o.Id)).ToList();
+        if (orders.Count == 0) return 0;
+        db.Orders.RemoveRange(orders);
+        db.SaveChanges();
+        return orders.Count;
     }
 
     public static string ComputeNextBuyingDay(string scheduleDays = "Wednesday, Thursday")

@@ -1405,6 +1405,10 @@ public partial class NewOrderPage : Page
             if (AddNoteBtn != null) AddNoteBtn.Content = "+ Add PO notes / special instructions";
         }
 
+        // Refresh product stock on hand and catalog tiles
+        LoadProducts();
+        ApplyProductFilter();
+
         RecalcTotal();
 
         // Re-focus search for the next order

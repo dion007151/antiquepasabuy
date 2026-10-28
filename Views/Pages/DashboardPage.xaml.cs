@@ -200,10 +200,10 @@ public partial class DashboardPage : Page
         }
         else
         {
-            _navigate?.Invoke("Orders");
+            _navigate?.Invoke("Masterlist");
         }
     }
     private void OnOpenBuyingList(object sender, RoutedEventArgs e) => _navigate?.Invoke("Buying");
-    private void OnViewAllOrders(object sender, RoutedEventArgs e) => _navigate?.Invoke("Orders");
+    private void OnViewAllOrders(object sender, RoutedEventArgs e) => _navigate?.Invoke("Masterlist");
     private void OnCreateOrderEmptyClick(object sender, RoutedEventArgs e) => _navigate?.Invoke("NewOrder");
 }
